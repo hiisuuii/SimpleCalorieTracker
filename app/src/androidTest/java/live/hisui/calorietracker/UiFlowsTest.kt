@@ -212,6 +212,25 @@ class UiFlowsTest {
     }
 
     @Test
+    fun aSavedMealIsOnlyDeletedAfterConfirming() {
+        runBlocking {
+            val bun = foodDao.insert(Food(name = "Bun", source = FoodSource.CUSTOM, kcalPer100g = 250.0))
+            savedMealDao.create("Sandwich", listOf(SavedMealItem(savedMealId = 0, foodId = bun, grams = 50.0)))
+        }
+
+        compose.onNodeWithContentDescription("Log food").performClick()
+        waitForText("Sandwich")
+        compose.onNodeWithContentDescription("Delete Sandwich").performClick()
+        waitForText("Delete Sandwich?")
+        compose.onNodeWithText("Cancel").performClick()
+        compose.onNodeWithText("Sandwich").assertExists()
+
+        compose.onNodeWithContentDescription("Delete Sandwich").performClick()
+        compose.onNodeWithText("Delete").performClick()
+        compose.waitUntil(WAIT_MS) { compose.onAllNodesWithText("Sandwich").fetchSemanticsNodes().isEmpty() }
+    }
+
+    @Test
     fun changeTheDailyTarget() {
         compose.onNodeWithText("Settings").performClick()
         waitForText("Daily calorie target (kcal)")

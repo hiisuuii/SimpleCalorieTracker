@@ -62,6 +62,7 @@ fun AddScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val searching = state.query.isNotBlank()
     var renaming by remember { mutableStateOf<SavedMeal?>(null) }
+    var deleting by remember { mutableStateOf<SavedMeal?>(null) }
 
     Scaffold(
         topBar = {
@@ -103,11 +104,25 @@ fun AddScreen(
             if (searching) {
                 searchResults(state, viewModel, onFood)
             } else {
-                browse(state, viewModel, onFood, onLogged, onRename = { renaming = it }, picking)
+                browse(state, viewModel, onFood, onLogged, onRename = { renaming = it }, onDelete = { deleting = it }, picking)
             }
         }
     }
 
+    deleting?.let { meal ->
+        AlertDialog(
+            onDismissRequest = { deleting = null },
+            title = { Text("Delete ${meal.name}?") },
+            text = { Text("This removes it from your saved meals. Meals you already logged stay in your log.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.deleteSavedMeal(meal)
+                    deleting = null
+                }) { Text("Delete") }
+            },
+            dismissButton = { TextButton(onClick = { deleting = null }) { Text("Cancel") } },
+        )
+    }
     renaming?.let { meal ->
         var name by remember(meal.id) { mutableStateOf(meal.name) }
         AlertDialog(
@@ -154,6 +169,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.browse(
     onFood: (Long) -> Unit,
     onLogged: () -> Unit,
     onRename: (SavedMeal) -> Unit,
+    onDelete: (SavedMeal) -> Unit,
     picking: Boolean,
 ) {
     if (!picking && state.savedMeals.isNotEmpty()) {
@@ -167,7 +183,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.browse(
             ) {
                 Text(meal.name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f).padding(vertical = 12.dp))
                 IconButton(onClick = { onRename(meal) }) { Icon(Icons.Default.Edit, "Rename ${meal.name}") }
-                IconButton(onClick = { viewModel.deleteSavedMeal(meal) }) { Icon(Icons.Default.Delete, "Delete ${meal.name}") }
+                IconButton(onClick = { onDelete(meal) }) { Icon(Icons.Default.Delete, "Delete ${meal.name}") }
             }
         }
     }
