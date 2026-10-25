@@ -1,5 +1,6 @@
 package live.hisui.calorietracker.data
 
+import android.util.Log
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -107,9 +108,17 @@ class FoodRepository @Inject constructor(
     }
 }
 
-fun Throwable.toSearchMessage(): String = when {
-    this is IOException -> "No connection. Saved foods still work offline."
-    this is HttpException && code() == 429 -> "USDA rate limit reached. Add your own API key in Settings."
-    this is HttpException && (code() == 400 || code() == 403) -> "USDA rejected the API key. Check it in Settings."
-    else -> "Online lookup failed. Saved foods still work offline."
+fun Throwable.toSearchMessage(): String {
+    Log.w("FoodLookup", "online lookup failed", this)
+    return when {
+        this is IOException -> "No connection. Saved foods still work offline."
+        this is HttpException && code() == 429 -> "USDA rate limit reached. Add your own API key in Settings."
+        this is HttpException -> {
+            val apiCode = Regex(""""code"\s*:\s*"([A-Z_]+)"""").find(response()?.errorBody()?.string().orEmpty())?.groupValues?.get(1)
+            val keyProblem = apiCode == "API_KEY_INVALID" || apiCode == "API_KEY_MISSING"
+            val detail = listOfNotNull("HTTP ${code()}", apiCode).joinToString(", ")
+            if (keyProblem) "USDA says the API key is invalid ($detail). Check it in Settings." else "USDA lookup failed ($detail)."
+        }
+        else -> "Online lookup failed. Saved foods still work offline."
+    }
 }

@@ -43,14 +43,16 @@ private fun UsdaFood.brandedServingPortion(): List<Portion> {
 
 fun UsdaDetails.toPortions(): List<Portion> = foodPortions.mapNotNull { p ->
     val grams = p.gramWeight?.takeIf { it > 0 } ?: return@mapNotNull null
-    val description = p.portionDescription?.takeIf { it.isNotBlank() && !it.startsWith("Quantity not specified") }
+    // FNDDS lists a default-quantity row whose modifier is an internal code like "90000"; it duplicates a real portion.
+    if (p.portionDescription?.startsWith("Quantity not specified") == true) return@mapNotNull null
+    val description = p.portionDescription?.takeIf { it.isNotBlank() }
     val (amount, text) = if (description != null) {
         splitLeadingAmount(description)
     } else {
         val unit = p.measureUnit?.name?.takeIf { it.isNotBlank() && it != "undetermined" }
         (p.amount?.takeIf { it > 0 } ?: 1.0) to listOfNotNull(unit, p.modifier?.takeIf { it.isNotBlank() }).joinToString(" ")
     }
-    text.takeIf { it.isNotBlank() }?.let { Portion(foodId = 0, label = "1 $it", grams = grams / amount) }
+    text.takeIf { it.isNotBlank() && !it.all(Char::isDigit) }?.let { Portion(foodId = 0, label = "1 $it", grams = grams / amount) }
 }.distinctBy { it.label }
 
 private val leadingAmount = Regex("""^\s*(\d+(?:\.\d+)?)(?:\s+(\d+)/(\d+)|/(\d+))?\s+(.+)$""")

@@ -6,6 +6,8 @@
     {"portionDescription": "2 slices", "gramWeight": 56.0, "measureUnit": {"name": "undetermined"}},
     {"portionDescription": "1/2 breast", "gramWeight": 86.0, "measureUnit": {"name": "undetermined"}},
     {"portionDescription": "Quantity not specified", "gramWeight": 100.0, "measureUnit": {"name": "undetermined"}},
+    {"portionDescription": "Quantity not specified", "gramWeight": 52.0, "modifier": "90000", "measureUnit": {"name": "undetermined"}},
+    {"gramWeight": 52.0, "modifier": "64538", "measureUnit": {"name": "undetermined"}},
     {"amount": 0.5, "gramWeight": 50.0, "modifier": "large", "measureUnit": {"name": "undetermined"}},
     {"amount": 1.0, "modifier": "small", "measureUnit": {"name": "undetermined"}}
   ]
