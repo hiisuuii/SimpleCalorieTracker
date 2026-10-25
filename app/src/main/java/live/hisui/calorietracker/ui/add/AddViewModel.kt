@@ -41,6 +41,7 @@ class AddViewModel @Inject constructor(
 ) : ViewModel() {
     private val _state = MutableStateFlow(AddUiState())
     val state: StateFlow<AddUiState> = _state.asStateFlow()
+    val logDate get() = log.logTargetDate
 
     init {
         collect(log.recentFoodEntries) { s, v -> s.copy(recents = v) }

@@ -6,13 +6,17 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -25,6 +29,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -50,6 +55,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import java.time.LocalDate
 import kotlin.math.roundToInt
 import live.hisui.calorietracker.data.db.LogEntry
 import live.hisui.calorietracker.data.db.withGrams
@@ -60,6 +66,7 @@ import live.hisui.calorietracker.ui.common.gramsText
 import live.hisui.calorietracker.ui.common.kcalText
 import live.hisui.calorietracker.ui.common.label
 import live.hisui.calorietracker.ui.common.macroText
+import live.hisui.calorietracker.ui.common.relativeLabel
 
 private sealed interface DayItem {
     data class Single(val entry: LogEntry) : DayItem
@@ -88,6 +95,7 @@ fun DayScreen(onAdd: () -> Unit, onBack: (() -> Unit)?, viewModel: DayViewModel 
     var savingMeal by remember { mutableStateOf<List<LogEntry>?>(null) }
     var deletingGroup by remember { mutableStateOf<DayItem.Group?>(null) }
     var renamingGroup by remember { mutableStateOf<DayItem.Group?>(null) }
+    var movingGroup by remember { mutableStateOf<DayItem.Group?>(null) }
     var expanded by remember { mutableStateOf(emptySet<String>()) }
 
     LaunchedEffect(Unit) {
@@ -106,9 +114,12 @@ fun DayScreen(onAdd: () -> Unit, onBack: (() -> Unit)?, viewModel: DayViewModel 
             )
         },
         floatingActionButton = {
-            if (state.isToday) {
-                FloatingActionButton(onClick = onAdd) { Icon(Icons.Default.Add, "Log food") }
-            }
+            FloatingActionButton(
+                onClick = {
+                    viewModel.beginLogging()
+                    onAdd()
+                },
+            ) { Icon(Icons.Default.Add, "Log food") }
         },
         snackbarHost = { SnackbarHost(snackbar) },
     ) { padding ->
@@ -141,6 +152,7 @@ fun DayScreen(onAdd: () -> Unit, onBack: (() -> Unit)?, viewModel: DayViewModel 
                                         onToggle = { expanded = if (item.id in expanded) expanded - item.id else expanded + item.id },
                                         onEdit = { editing = it },
                                         onRename = { renamingGroup = item },
+                                        onMove = { movingGroup = item },
                                         onDelete = { deletingGroup = item },
                                     )
                                 }
@@ -158,6 +170,7 @@ fun DayScreen(onAdd: () -> Unit, onBack: (() -> Unit)?, viewModel: DayViewModel 
     editing?.let { entry ->
         EditEntryDialog(
             entry = entry,
+            today = state.today,
             onDismiss = { editing = null },
             onSave = {
                 viewModel.save(it)
@@ -176,6 +189,18 @@ fun DayScreen(onAdd: () -> Unit, onBack: (() -> Unit)?, viewModel: DayViewModel 
                 viewModel.saveAsMeal(it, rows)
                 savingMeal = null
             },
+        )
+    }
+    movingGroup?.let { group ->
+        DayChoiceDialog(
+            title = "Counts toward",
+            current = LocalDate.parse(group.entries.first().logDate),
+            today = state.today,
+            onPick = { date ->
+                viewModel.moveGroup(group.id, date)
+                movingGroup = null
+            },
+            onDismiss = { movingGroup = null },
         )
     }
     renamingGroup?.let { group ->
@@ -295,6 +320,7 @@ private fun EntryRow(entry: LogEntry, useOunces: Boolean, onClick: () -> Unit) {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun GroupRow(
     group: DayItem.Group,
@@ -303,6 +329,7 @@ private fun GroupRow(
     onToggle: () -> Unit,
     onEdit: (LogEntry) -> Unit,
     onRename: () -> Unit,
+    onMove: () -> Unit,
     onDelete: () -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -331,8 +358,9 @@ private fun GroupRow(
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.SemiBold,
                 )
-                Row {
+                FlowRow {
                     TextButton(onClick = onRename) { Text("Rename meal") }
+                    TextButton(onClick = onMove) { Text("Change day") }
                     TextButton(onClick = onDelete) { Text("Delete meal") }
                 }
             }
@@ -366,13 +394,17 @@ private fun macroLine(protein: Double?, carbs: Double?, fat: Double?) =
 private fun List<LogEntry>.sumOfOrNull(selector: (LogEntry) -> Double?): Double? =
     mapNotNull(selector).takeIf { it.isNotEmpty() }?.sum()
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun EditEntryDialog(
     entry: LogEntry,
+    today: LocalDate?,
     onDismiss: () -> Unit,
     onSave: (LogEntry) -> Unit,
     onDelete: () -> Unit,
 ) {
+    val originalDay = LocalDate.parse(entry.logDate)
+    var day by remember { mutableStateOf(originalDay) }
     var name by remember { mutableStateOf(entry.name) }
     var grams by remember { mutableStateOf(entry.grams?.roundToInt()?.toString().orEmpty()) }
     var kcal by remember { mutableStateOf(entry.kcal.roundToInt().toString()) }
@@ -384,7 +416,7 @@ private fun EditEntryDialog(
         onDismissRequest = onDismiss,
         title = { Text("Edit entry") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(name, { name = it }, label = { Text("Name") }, singleLine = true)
                 if (entry.grams != null) {
                     OutlinedTextField(
@@ -400,6 +432,15 @@ private fun EditEntryDialog(
                 }
                 OutlinedTextField(kcal, { kcal = it }, label = { Text("Calories") }, keyboardOptions = numeric, singleLine = true)
                 MealChips(meal, { meal = it })
+                // Moving one food out of a built meal would split the meal across days; use "Change day" on the meal instead.
+                if (entry.groupId == null) {
+                    Text("Counts toward", style = MaterialTheme.typography.labelMedium)
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf(originalDay.minusDays(1), originalDay, originalDay.plusDays(1)).forEach { option ->
+                            FilterChip(selected = day == option, onClick = { day = option }, label = { Text(option.relativeLabel(today)) })
+                        }
+                    }
+                }
                 if (entry.proteinG != null || entry.carbsG != null || entry.fatG != null) {
                     TextButton(onClick = { showMacros = !showMacros }) { Text(if (showMacros) "Hide macros" else "Show macros") }
                     if (showMacros) {
@@ -415,7 +456,7 @@ private fun EditEntryDialog(
             TextButton(onClick = {
                 val g = grams.toDoubleOrNull()
                 val base = if (entry.grams != null && g != null && g > 0) entry.withGrams(g) else entry
-                onSave(base.copy(name = name.ifBlank { entry.name }, kcal = kcal.toDoubleOrNull() ?: base.kcal, meal = meal))
+                onSave(base.copy(name = name.ifBlank { entry.name }, kcal = kcal.toDoubleOrNull() ?: base.kcal, meal = meal, logDate = day.toString()))
             }) { Text("Save") }
         },
         dismissButton = {
@@ -424,6 +465,24 @@ private fun EditEntryDialog(
                 TextButton(onClick = onDismiss) { Text("Cancel") }
             }
         },
+    )
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun DayChoiceDialog(title: String, current: LocalDate, today: LocalDate?, onPick: (LocalDate) -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(current.minusDays(1), current, current.plusDays(1)).forEach { option ->
+                    FilterChip(selected = option == current, onClick = { if (option == current) onDismiss() else onPick(option) }, label = { Text(option.relativeLabel(today)) })
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )
 }
 

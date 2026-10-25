@@ -42,6 +42,7 @@ class BuildMealViewModel @Inject constructor(
     private val log: LogRepository,
     private val savedMeals: SavedMealRepository,
 ) : ViewModel() {
+    val logDate get() = log.logTargetDate
     private val slot = MutableStateFlow(Meal.SNACK)
     private val saveForReuse = MutableStateFlow(true)
 

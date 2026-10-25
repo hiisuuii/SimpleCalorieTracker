@@ -34,6 +34,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import live.hisui.calorietracker.domain.FoodSource
 import live.hisui.calorietracker.ui.common.MealChips
+import live.hisui.calorietracker.ui.common.friendly
 import live.hisui.calorietracker.ui.common.kcalText
 import live.hisui.calorietracker.ui.common.macroText
 
@@ -122,7 +123,7 @@ fun PortionScreen(
                 onClick = { viewModel.log(onLogged) },
                 enabled = state.grams != null,
                 modifier = Modifier.fillMaxWidth(),
-            ) { Text(if (viewModel.picking) "Add to meal" else "Log") }
+            ) { Text(if (viewModel.picking) "Add to meal" else viewModel.logDate?.let { "Log to ${it.friendly()}" } ?: "Log") }
         }
     }
 }

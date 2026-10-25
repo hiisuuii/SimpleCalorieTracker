@@ -24,7 +24,7 @@ Foods you have used are cached on the phone, so repeat foods need no network.
 ## What it does
 
 - **Log** by search, barcode scan, or label photo, or **Build a meal** from foods you already have (for example a chicken sandwich from chicken plus a bun). A built meal shows as one row with its total; tap it to see each food and its nutrition.
-- **Day view** with a running total against your target, meals grouped by time, edit and delete for every entry.
+- **Day view** with a running total against your target and collapsible meal sections. Edit or delete any entry, move an entry or a built meal to the day before or after, or tap + on a past day to log food to it.
 - **Reminders** that look at what you have logged when they fire ("430 kcal left to reach today's target").
 - **Backup** to JSON (and CSV export of the log) from Settings.
 

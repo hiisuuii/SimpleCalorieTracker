@@ -33,9 +33,12 @@ import kotlinx.coroutines.launch
 import live.hisui.calorietracker.data.LogRepository
 import live.hisui.calorietracker.domain.Meal
 import live.hisui.calorietracker.ui.common.MealChips
+import live.hisui.calorietracker.ui.common.friendly
 
 @HiltViewModel
 class QuickAddViewModel @Inject constructor(private val log: LogRepository) : ViewModel() {
+    val logDate get() = log.logTargetDate
+
     suspend fun defaultMeal() = log.mealNow()
 
     fun add(label: String, kcal: Double, meal: Meal, onDone: () -> Unit) {
@@ -88,7 +91,7 @@ fun QuickAddScreen(onBack: () -> Unit, onLogged: () -> Unit, viewModel: QuickAdd
                 onClick = { viewModel.add(label, kcal.toDouble(), meal, onLogged) },
                 enabled = kcal.toDoubleOrNull() != null,
                 modifier = Modifier.fillMaxWidth(),
-            ) { Text("Log") }
+            ) { Text(viewModel.logDate?.let { "Log to ${it.friendly()}" } ?: "Log") }
         }
     }
 }

@@ -38,6 +38,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlin.math.roundToInt
 import live.hisui.calorietracker.ui.common.MealChips
+import live.hisui.calorietracker.ui.common.friendly
 import live.hisui.calorietracker.ui.common.kcalText
 import live.hisui.calorietracker.ui.common.macroText
 
@@ -113,7 +114,9 @@ fun BuildMealScreen(
                 Checkbox(state.saveForReuse, viewModel::setSaveForReuse)
                 Text("Save to my meals so I can log it again in one tap")
             }
-            Button(onClick = { viewModel.logMeal(onLogged) }, enabled = state.canLog, modifier = Modifier.fillMaxWidth()) { Text("Log meal") }
+            Button(onClick = { viewModel.logMeal(onLogged) }, enabled = state.canLog, modifier = Modifier.fillMaxWidth()) {
+                Text(viewModel.logDate?.let { "Log meal to ${it.friendly()}" } ?: "Log meal")
+            }
             if (state.items.isNotEmpty() || name.isNotBlank()) {
                 TextButton(
                     onClick = {

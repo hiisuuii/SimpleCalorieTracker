@@ -26,6 +26,7 @@ import org.junit.runner.RunWith
 class GroupLoggingTest {
     private lateinit var db: AppDatabase
     private lateinit var log: LogRepository
+    private lateinit var target: LogTarget
     private lateinit var savedMeals: SavedMealRepository
     private val scope = CoroutineScope(Dispatchers.IO + Job())
 
@@ -37,7 +38,8 @@ class GroupLoggingTest {
             PreferenceDataStoreFactory.create(scope = scope) { context.cacheDir.resolve("group-test-${System.nanoTime()}.preferences_pb") },
             Json,
         )
-        log = LogRepository(db.logDao(), db.foodDao(), settings, Clock.systemDefaultZone())
+        target = LogTarget()
+        log = LogRepository(db.logDao(), db.foodDao(), settings, Clock.systemDefaultZone(), target)
         savedMeals = SavedMealRepository(db.savedMealDao(), FoodRepository(db.foodDao(), OfflineUsda, settings), log)
     }
 
@@ -86,6 +88,39 @@ class GroupLoggingTest {
         assertEquals(2, byName.getValue("Chicken sandwich").size)
         assertEquals(1, byName.getValue("Salad").size)
         assertEquals(290.0 + 132.0, log.totalForDate(today).first(), 0.001)
+    }
+
+    @Test
+    fun loggingFromAPastDayLandsOnThatDayAndClearingTheTargetReturnsToNow() = runTest {
+        val bun = food("Bun", 250.0)
+        val today = log.currentLogDate.first()
+        val past = today.minusDays(3)
+
+        target.date = past
+        log.quickAdd("Forgotten dinner", 600.0, Meal.DINNER)
+        log.logFood(bun, 100.0, Meal.DINNER)
+        log.logGroup("Sandwich", listOf(bun to 50.0), Meal.DINNER)
+        target.date = null
+        log.quickAdd("Snack now", 50.0, Meal.SNACK)
+
+        assertEquals(3, log.entriesForDate(past).first().size)
+        assertEquals(listOf("Snack now"), log.entriesForDate(today).first().map { it.name })
+        assertEquals(975.0, log.totalForDate(past).first(), 0.001)
+    }
+
+    @Test
+    fun movingAGroupMovesEveryFoodInItToTheOtherDay() = runTest {
+        val chicken = food("Chicken", 165.0)
+        val bun = food("Bun", 250.0)
+        val today = log.currentLogDate.first()
+        log.logGroup("Sandwich", listOf(chicken to 100.0, bun to 50.0), Meal.LUNCH)
+        val groupId = log.entriesForDate(today).first().first().groupId!!
+
+        log.moveGroup(groupId, today.minusDays(1))
+
+        assertEquals(0, log.entriesForDate(today).first().size)
+        assertEquals(2, log.entriesForDate(today.minusDays(1)).first().size)
+        assertEquals(290.0, log.totalForDate(today.minusDays(1)).first(), 0.001)
     }
 
     @Test

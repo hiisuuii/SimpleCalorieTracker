@@ -25,6 +25,13 @@ fun Double.macroText(): String = "%.1f".format(this)
 fun LocalDate.friendly(): String =
     format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM))
 
+fun LocalDate.relativeLabel(today: LocalDate?): String = when {
+    this == today -> "Today"
+    today != null && this == today.minusDays(1) -> "Yesterday"
+    today != null && this == today.plusDays(1) -> "Tomorrow"
+    else -> DateTimeFormatter.ofPattern("MMM d").format(this)
+}
+
 val Meal.label: String
     get() = name.lowercase().replaceFirstChar { it.uppercase() }
 

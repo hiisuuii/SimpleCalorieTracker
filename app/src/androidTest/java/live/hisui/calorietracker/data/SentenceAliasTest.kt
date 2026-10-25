@@ -52,7 +52,7 @@ class SentenceAliasTest {
             Json,
         )
         val foods = FoodRepository(db.foodDao(), OfflineUsda, settings)
-        val log = LogRepository(db.logDao(), db.foodDao(), settings, Clock.systemDefaultZone())
+        val log = LogRepository(db.logDao(), db.foodDao(), settings, Clock.systemDefaultZone(), LogTarget())
         service = SentenceService(RuleBasedParser(), db.aliasDao(), foods, log)
     }
 

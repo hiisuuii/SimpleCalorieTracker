@@ -23,6 +23,7 @@ import live.hisui.calorietracker.domain.DayBoundary
 import live.hisui.calorietracker.domain.EntrySource
 import live.hisui.calorietracker.domain.FoodSource
 import live.hisui.calorietracker.domain.Meal
+import live.hisui.calorietracker.ui.common.friendly
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -146,6 +147,48 @@ class UiFlowsTest {
         waitForText("Toast")
         compose.onNodeWithText("Eggs").assertExists()
         compose.onNodeWithText("Breakfast (2 items)").assertDoesNotExist()
+    }
+
+    private fun seedEntry(date: java.time.LocalDate, name: String, kcal: Double) = runBlocking {
+        logDao.insert(
+            LogEntry(
+                loggedAt = System.currentTimeMillis(), tzId = ZoneId.systemDefault().id, logDate = date.toString(),
+                meal = Meal.BREAKFAST, name = name, kcal = kcal, source = EntrySource.QUICK_ADD,
+            ),
+        )
+    }
+
+    private val today get() = DayBoundary.logDate(Instant.now(), ZoneId.systemDefault(), rolloverHour = 4)
+
+    @Test
+    fun anEntryCanBeMovedToTheDayBefore() {
+        seedEntry(today, "Crackers", 120.0)
+
+        waitForText("Crackers")
+        compose.onNodeWithText("Crackers").performClick()
+        compose.onNodeWithText("Yesterday").performClick()
+        compose.onNodeWithText("Save").performClick()
+
+        waitForText("0 / 2000 kcal")
+        compose.onNodeWithText("Crackers").assertDoesNotExist()
+    }
+
+    @Test
+    fun foodCanBeLoggedIntoAPastDayFromHistory() {
+        val yesterday = today.minusDays(1)
+        seedEntry(yesterday, "Toast", 100.0)
+
+        compose.onNodeWithText("History").performClick()
+        waitForText(yesterday.friendly())
+        compose.onNodeWithText(yesterday.friendly()).performClick()
+        waitForText("Toast")
+        compose.onNodeWithContentDescription("Log food").performClick()
+        compose.onNodeWithText("Quick add").performClick()
+        compose.onNodeWithText("Calories").performTextInput("120")
+        compose.onNodeWithText("Log to", substring = true).performClick()
+
+        waitForText("220 / 2000 kcal")
+        compose.onNodeWithText("Toast").assertExists()
     }
 
     @Test

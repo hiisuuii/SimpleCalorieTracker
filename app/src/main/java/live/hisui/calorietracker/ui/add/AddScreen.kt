@@ -35,6 +35,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import live.hisui.calorietracker.data.db.Food
 import live.hisui.calorietracker.data.db.LogEntry
+import live.hisui.calorietracker.ui.common.friendly
 import live.hisui.calorietracker.ui.common.gramsText
 import live.hisui.calorietracker.ui.common.kcalText
 
@@ -58,7 +59,7 @@ fun AddScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (picking) "Add food to meal" else "Log food") },
+                title = { Text(if (picking) "Add food to meal" else viewModel.logDate?.let { "Log to ${it.friendly()}" } ?: "Log food") },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } },
             )
         },

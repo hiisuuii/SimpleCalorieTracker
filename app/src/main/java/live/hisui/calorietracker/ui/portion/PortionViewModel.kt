@@ -57,6 +57,7 @@ class PortionViewModel @Inject constructor(
 ) : ViewModel() {
     private val foodId: Long = checkNotNull(handle["foodId"])
     val picking: Boolean = handle["pick"] ?: false
+    val logDate get() = log.logTargetDate
     private val source = handle.get<String>("source")?.let { EntrySource.valueOf(it.uppercase()) } ?: EntrySource.MANUAL
     private val _state = MutableStateFlow(PortionUiState())
     val state: StateFlow<PortionUiState> = _state.asStateFlow()

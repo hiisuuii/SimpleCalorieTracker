@@ -30,6 +30,7 @@ data class DayUiState(
     val target: Int = 2000,
     val useOunces: Boolean = false,
     val collapsedMeals: Set<Meal> = emptySet(),
+    val today: LocalDate? = null,
 )
 
 @HiltViewModel
@@ -44,14 +45,27 @@ class DayViewModel @Inject constructor(
     @OptIn(ExperimentalCoroutinesApi::class)
     val state: StateFlow<DayUiState> = (fixedDate?.let { flowOf(it) } ?: log.currentLogDate)
         .flatMapLatest { date ->
-            combine(log.entriesForDate(date), log.totalForDate(date), settings.settings, settings.collapsedMeals) { entries, total, s, collapsed ->
-                DayUiState(date, fixedDate == null, entries, total, s.dailyTarget, s.useOunces, collapsed)
+            combine(
+                log.entriesForDate(date),
+                log.totalForDate(date),
+                settings.settings,
+                settings.collapsedMeals,
+                log.currentLogDate,
+            ) { entries, total, s, collapsed, today ->
+                DayUiState(date, fixedDate == null, entries, total, s.dailyTarget, s.useOunces, collapsed, today)
             }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DayUiState())
 
     private val messageChannel = Channel<String>(Channel.BUFFERED)
     val messages = messageChannel.receiveAsFlow()
+
+    // Today's screen logs "now"; a past day's screen sends everything logged next to that day.
+    fun beginLogging() {
+        log.logTargetDate = fixedDate
+    }
+
+    fun moveGroup(groupId: String, date: LocalDate) = viewModelScope.launch { log.moveGroup(groupId, date) }
 
     fun setCollapsed(meal: Meal, collapsed: Boolean) = viewModelScope.launch { settings.setMealCollapsed(meal, collapsed) }
 

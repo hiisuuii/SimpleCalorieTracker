@@ -22,6 +22,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import live.hisui.calorietracker.data.LogTarget
 import live.hisui.calorietracker.ui.add.AddScreen
 import live.hisui.calorietracker.ui.barcode.BarcodeScreen
 import live.hisui.calorietracker.ui.build.BuildMealScreen
@@ -58,11 +59,15 @@ private val topLevel = listOf(
 )
 
 @Composable
-fun AppNav(requestedRoute: String?, onRouteHandled: () -> Unit) {
+fun AppNav(requestedRoute: String?, onRouteHandled: () -> Unit, logTarget: LogTarget) {
     val nav = rememberNavController()
     val current by nav.currentBackStackEntryAsState()
     val route = current?.destination?.route
-    val backToDay = { nav.popBackStack(Route.DAY, inclusive = false) }
+    // Logging started from a past day returns to that day, not to Today.
+    val backToDay = {
+        val pastDay = logTarget.date != null && nav.popBackStack(Route.PAST_DAY, inclusive = false)
+        if (!pastDay) nav.popBackStack(Route.DAY, inclusive = false)
+    }
 
     LaunchedEffect(requestedRoute) {
         if (requestedRoute != null) {
@@ -98,7 +103,7 @@ fun AppNav(requestedRoute: String?, onRouteHandled: () -> Unit) {
                 DayScreen(onAdd = { nav.navigate("add") }, onBack = null)
             }
             composable(Route.PAST_DAY) {
-                DayScreen(onAdd = {}, onBack = { nav.popBackStack() })
+                DayScreen(onAdd = { nav.navigate("add") }, onBack = { nav.popBackStack() })
             }
             composable(Route.HISTORY) {
                 HistoryScreen(onDay = { nav.navigate("day/$it") })

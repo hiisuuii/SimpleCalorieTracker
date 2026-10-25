@@ -30,7 +30,14 @@ class LogRepository @Inject constructor(
     private val foods: FoodDao,
     private val settings: SettingsRepository,
     private val clock: Clock,
+    private val target: LogTarget,
 ) {
+    var logTargetDate: LocalDate?
+        get() = target.date
+        set(value) {
+            target.date = value
+        }
+
     val dailyTotals: Flow<List<DayTotal>> = log.dailyTotals()
     val recentFoodEntries: Flow<List<LogEntry>> = log.recentFoodEntries()
 
@@ -73,6 +80,8 @@ class LogRepository @Inject constructor(
 
     suspend fun renameGroup(groupId: String, name: String) = log.renameGroup(groupId, name)
 
+    suspend fun moveGroup(groupId: String, date: LocalDate) = log.moveGroup(groupId, date.toString())
+
     private suspend fun foodEntry(food: Food, grams: Double, meal: Meal, source: EntrySource, now: Instant): LogEntry {
         val n = Nutrition(food.kcalPer100g, food.proteinPer100g, food.carbsPer100g, food.fatPer100g).scaledTo(grams)
         return newEntry(now, meal, food.name, n.kcal, source).copy(
@@ -111,7 +120,7 @@ class LogRepository @Inject constructor(
         return LogEntry(
             loggedAt = now.toEpochMilli(),
             tzId = clock.zone.id,
-            logDate = DayBoundary.logDate(now, clock.zone, rollover).toString(),
+            logDate = (target.date ?: DayBoundary.logDate(now, clock.zone, rollover)).toString(),
             meal = meal,
             name = name,
             kcal = kcal,
