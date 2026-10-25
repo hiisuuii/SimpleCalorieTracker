@@ -19,6 +19,8 @@ import live.hisui.calorietracker.data.db.Food
 import live.hisui.calorietracker.data.db.FoodDao
 import live.hisui.calorietracker.data.db.LogDao
 import live.hisui.calorietracker.data.db.LogEntry
+import live.hisui.calorietracker.data.db.SavedMealDao
+import live.hisui.calorietracker.data.db.SavedMealItem
 import live.hisui.calorietracker.domain.DayBoundary
 import live.hisui.calorietracker.domain.EntrySource
 import live.hisui.calorietracker.domain.FoodSource
@@ -38,6 +40,7 @@ class UiFlowsTest {
 
     @Inject lateinit var foodDao: FoodDao
     @Inject lateinit var logDao: LogDao
+    @Inject lateinit var savedMealDao: SavedMealDao
 
     @Before
     fun setUp() {
@@ -189,6 +192,23 @@ class UiFlowsTest {
 
         waitForText("220 / 2000 kcal")
         compose.onNodeWithText("Toast").assertExists()
+    }
+
+    @Test
+    fun aSavedMealCanBeRenamed() {
+        runBlocking {
+            val bun = foodDao.insert(Food(name = "Bun", source = FoodSource.CUSTOM, kcalPer100g = 250.0))
+            savedMealDao.create("Sandwich", listOf(SavedMealItem(savedMealId = 0, foodId = bun, grams = 50.0)))
+        }
+
+        compose.onNodeWithContentDescription("Log food").performClick()
+        waitForText("Sandwich")
+        compose.onNodeWithContentDescription("Rename Sandwich").performClick()
+        compose.onNodeWithText("Meal name").performTextReplacement("Chicken sandwich")
+        compose.onNodeWithText("Save").performClick()
+
+        waitForText("Chicken sandwich")
+        compose.onNodeWithText("Sandwich").assertDoesNotExist()
     }
 
     @Test

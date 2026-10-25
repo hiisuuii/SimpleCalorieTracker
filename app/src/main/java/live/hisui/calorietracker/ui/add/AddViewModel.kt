@@ -100,4 +100,8 @@ class AddViewModel @Inject constructor(
     fun deleteSavedMeal(meal: SavedMeal) {
         viewModelScope.launch { savedMeals.delete(meal.id) }
     }
+
+    fun renameSavedMeal(meal: SavedMeal, name: String) {
+        viewModelScope.launch { savedMeals.rename(meal.id, name.trim()) }
+    }
 }

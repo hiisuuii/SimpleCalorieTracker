@@ -40,4 +40,6 @@ class SavedMealRepository @Inject constructor(
     }
 
     suspend fun delete(id: Long) = dao.delete(id)
+
+    suspend fun rename(id: Long, name: String) = dao.rename(id, name)
 }

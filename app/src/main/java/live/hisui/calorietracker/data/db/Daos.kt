@@ -176,6 +176,9 @@ interface SavedMealDao {
     @Query("DELETE FROM saved_meal WHERE id = :id")
     suspend fun delete(id: Long)
 
+    @Query("UPDATE saved_meal SET name = :name WHERE id = :id")
+    suspend fun rename(id: Long, name: String)
+
     @Query("SELECT * FROM saved_meal")
     suspend fun allMeals(): List<SavedMeal>
 

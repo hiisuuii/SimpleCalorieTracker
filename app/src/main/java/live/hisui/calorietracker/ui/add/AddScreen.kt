@@ -15,6 +15,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -29,12 +31,16 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import live.hisui.calorietracker.data.db.Food
 import live.hisui.calorietracker.data.db.LogEntry
+import live.hisui.calorietracker.data.db.SavedMeal
 import live.hisui.calorietracker.ui.common.friendly
 import live.hisui.calorietracker.ui.common.gramsText
 import live.hisui.calorietracker.ui.common.kcalText
@@ -55,6 +61,7 @@ fun AddScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val searching = state.query.isNotBlank()
+    var renaming by remember { mutableStateOf<SavedMeal?>(null) }
 
     Scaffold(
         topBar = {
@@ -96,9 +103,28 @@ fun AddScreen(
             if (searching) {
                 searchResults(state, viewModel, onFood)
             } else {
-                browse(state, viewModel, onFood, onLogged, picking)
+                browse(state, viewModel, onFood, onLogged, onRename = { renaming = it }, picking)
             }
         }
+    }
+
+    renaming?.let { meal ->
+        var name by remember(meal.id) { mutableStateOf(meal.name) }
+        AlertDialog(
+            onDismissRequest = { renaming = null },
+            title = { Text("Rename meal") },
+            text = { OutlinedTextField(name, { name = it }, label = { Text("Meal name") }, singleLine = true) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.renameSavedMeal(meal, name)
+                        renaming = null
+                    },
+                    enabled = name.isNotBlank(),
+                ) { Text("Save") }
+            },
+            dismissButton = { TextButton(onClick = { renaming = null }) { Text("Cancel") } },
+        )
     }
 }
 
@@ -127,6 +153,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.browse(
     viewModel: AddViewModel,
     onFood: (Long) -> Unit,
     onLogged: () -> Unit,
+    onRename: (SavedMeal) -> Unit,
     picking: Boolean,
 ) {
     if (!picking && state.savedMeals.isNotEmpty()) {
@@ -138,8 +165,9 @@ private fun androidx.compose.foundation.lazy.LazyListScope.browse(
                     .clickable { viewModel.logSavedMeal(meal, onLogged) },
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Text(meal.name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(vertical = 12.dp))
-                IconButton(onClick = { viewModel.deleteSavedMeal(meal) }) { Icon(Icons.Default.Delete, "Delete saved meal") }
+                Text(meal.name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f).padding(vertical = 12.dp))
+                IconButton(onClick = { onRename(meal) }) { Icon(Icons.Default.Edit, "Rename ${meal.name}") }
+                IconButton(onClick = { viewModel.deleteSavedMeal(meal) }) { Icon(Icons.Default.Delete, "Delete ${meal.name}") }
             }
         }
     }
