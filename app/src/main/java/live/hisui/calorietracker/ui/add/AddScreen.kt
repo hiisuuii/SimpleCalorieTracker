@@ -3,6 +3,8 @@ package live.hisui.calorietracker.ui.add
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -36,7 +38,7 @@ import live.hisui.calorietracker.data.db.LogEntry
 import live.hisui.calorietracker.ui.common.gramsText
 import live.hisui.calorietracker.ui.common.kcalText
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun AddScreen(
     onBack: () -> Unit,
@@ -45,6 +47,7 @@ fun AddScreen(
     onCustomFood: () -> Unit,
     onSentence: () -> Unit,
     onScanBarcode: () -> Unit,
+    onScanLabel: () -> Unit,
     onLogged: () -> Unit,
     viewModel: AddViewModel = hiltViewModel(),
 ) {
@@ -80,8 +83,9 @@ fun AddScreen(
                 }
             }
             item {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(onClick = onQuickAdd) { Text("Quick add") }
+                    OutlinedButton(onClick = onScanLabel) { Text("Scan label") }
                     OutlinedButton(onClick = onCustomFood) { Text("Custom food") }
                 }
             }

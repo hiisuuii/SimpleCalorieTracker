@@ -27,6 +27,7 @@ import live.hisui.calorietracker.ui.barcode.BarcodeScreen
 import live.hisui.calorietracker.ui.custom.CustomFoodScreen
 import live.hisui.calorietracker.ui.day.DayScreen
 import live.hisui.calorietracker.ui.history.HistoryScreen
+import live.hisui.calorietracker.ui.label.LabelScreen
 import live.hisui.calorietracker.ui.portion.PortionScreen
 import live.hisui.calorietracker.ui.quickadd.QuickAddScreen
 import live.hisui.calorietracker.ui.sentence.SentenceScreen
@@ -41,6 +42,7 @@ private object Route {
     const val ABOUT = "about"
     const val ADD = "add"
     const val BARCODE = "barcode"
+    const val LABEL = "label?barcode={barcode}"
     const val PORTION = "portion/{foodId}?source={source}"
     const val QUICK_ADD = "quickadd"
     const val SENTENCE = "sentence"
@@ -115,6 +117,7 @@ fun AppNav(requestedRoute: String?, onRouteHandled: () -> Unit) {
                     onCustomFood = { nav.navigate("custom") },
                     onSentence = { nav.navigate(Route.SENTENCE) },
                     onScanBarcode = { nav.navigate(Route.BARCODE) },
+                    onScanLabel = { nav.navigate("label") },
                     onLogged = { backToDay() },
                 )
             }
@@ -123,6 +126,16 @@ fun AppNav(requestedRoute: String?, onRouteHandled: () -> Unit) {
                     onBack = { nav.popBackStack() },
                     onFound = { id -> nav.navigate("portion/$id?source=barcode") { popUpTo(Route.ADD) } },
                     onCreateFood = { code -> nav.navigate("custom?barcode=$code") { popUpTo(Route.ADD) } },
+                    onScanLabel = { code -> nav.navigate("label?barcode=$code") { popUpTo(Route.ADD) } },
+                )
+            }
+            composable(
+                Route.LABEL,
+                arguments = listOf(navArgument("barcode") { type = NavType.StringType; nullable = true }),
+            ) {
+                LabelScreen(
+                    onBack = { nav.popBackStack() },
+                    onSaved = { id -> nav.navigate("portion/$id?source=label") { popUpTo(Route.ADD) } },
                 )
             }
             composable(Route.SENTENCE) {

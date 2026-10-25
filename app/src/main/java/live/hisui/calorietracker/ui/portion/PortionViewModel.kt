@@ -63,7 +63,8 @@ class PortionViewModel @Inject constructor(
             val ounces = settings.current().useOunces
             val portions = foods.portions(foodId)
             // Packaged products are usually eaten by the serving, so start there.
-            val serving = portions.firstOrNull { it.label.startsWith("1 serving") }.takeIf { source == EntrySource.BARCODE }
+            val serving = portions.firstOrNull { it.label.startsWith("1 serving") }
+                .takeIf { source == EntrySource.BARCODE || source == EntrySource.LABEL }
             _state.value = PortionUiState(
                 food = foods.get(foodId),
                 portions = portions,

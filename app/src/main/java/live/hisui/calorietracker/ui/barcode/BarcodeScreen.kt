@@ -83,6 +83,7 @@ fun BarcodeScreen(
     onBack: () -> Unit,
     onFound: (Long) -> Unit,
     onCreateFood: (barcode: String) -> Unit,
+    onScanLabel: (barcode: String) -> Unit,
     viewModel: BarcodeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -118,7 +119,8 @@ fun BarcodeScreen(
                 is BarcodeUiState.NotFound -> {
                     Text("No product found for ${s.barcode}.", style = MaterialTheme.typography.titleMedium)
                     Text("Add it yourself and the next scan will find it instantly.")
-                    Button(onClick = { onCreateFood(s.barcode) }, modifier = Modifier.fillMaxWidth()) { Text("Enter nutrition manually") }
+                    Button(onClick = { onScanLabel(s.barcode) }, modifier = Modifier.fillMaxWidth()) { Text("Scan the nutrition label") }
+                    OutlinedButton(onClick = { onCreateFood(s.barcode) }, modifier = Modifier.fillMaxWidth()) { Text("Enter nutrition manually") }
                 }
                 is BarcodeUiState.Error -> Text(s.message, color = MaterialTheme.colorScheme.error)
                 BarcodeUiState.Idle -> Unit
