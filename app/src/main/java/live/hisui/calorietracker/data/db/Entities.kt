@@ -7,12 +7,9 @@ import androidx.room.Fts4
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import kotlinx.serialization.Serializable
-
-enum class Meal { BREAKFAST, LUNCH, DINNER, SNACK }
-
-enum class EntrySource { MANUAL, TEXT, BARCODE, LABEL, QUICK_ADD }
-
-enum class FoodSource { USDA, OFF, CUSTOM }
+import live.hisui.calorietracker.domain.EntrySource
+import live.hisui.calorietracker.domain.FoodSource
+import live.hisui.calorietracker.domain.Meal
 
 @Serializable
 @Entity(
@@ -114,6 +111,18 @@ data class LogEntry(
     val source: EntrySource,
     @ColumnInfo(name = "food_id") val foodId: Long? = null,
 )
+
+fun LogEntry.withGrams(newGrams: Double): LogEntry {
+    val old = grams?.takeIf { it > 0 } ?: return copy(grams = newGrams)
+    val factor = newGrams / old
+    return copy(
+        grams = newGrams,
+        kcal = kcal * factor,
+        proteinG = proteinG?.times(factor),
+        carbsG = carbsG?.times(factor),
+        fatG = fatG?.times(factor),
+    )
+}
 
 @Serializable
 @Entity(tableName = "saved_meal")

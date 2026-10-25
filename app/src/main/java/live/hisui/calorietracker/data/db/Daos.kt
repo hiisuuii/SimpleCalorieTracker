@@ -8,6 +8,7 @@ import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
+import live.hisui.calorietracker.domain.FoodSource
 
 @Dao
 interface LogDao {
@@ -40,6 +41,13 @@ interface LogDao {
 
     @Query("SELECT * FROM log_entry ORDER BY logged_at")
     suspend fun all(): List<LogEntry>
+
+    @Query(
+        "SELECT * FROM log_entry WHERE id IN " +
+            "(SELECT MAX(id) FROM log_entry WHERE food_id IS NOT NULL GROUP BY food_id) " +
+            "ORDER BY logged_at DESC LIMIT :limit",
+    )
+    fun recentFoodEntries(limit: Int = 20): Flow<List<LogEntry>>
 }
 
 @Dao
@@ -105,6 +113,13 @@ interface FoodDao {
     suspend fun replacePortions(foodId: Long, portions: List<Portion>) {
         deletePortions(foodId)
         insertPortions(portions.map { it.copy(id = 0, foodId = foodId) })
+    }
+
+    @Transaction
+    suspend fun insertWithPortions(food: Food, portions: List<Portion>): Long {
+        val id = insert(food)
+        insertPortions(portions.map { it.copy(id = 0, foodId = id) })
+        return id
     }
 }
 

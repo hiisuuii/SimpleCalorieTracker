@@ -7,11 +7,11 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import live.hisui.calorietracker.data.db.AppDatabase
-import live.hisui.calorietracker.data.db.EntrySource
 import live.hisui.calorietracker.data.db.Food
-import live.hisui.calorietracker.data.db.FoodSource
 import live.hisui.calorietracker.data.db.LogEntry
-import live.hisui.calorietracker.data.db.Meal
+import live.hisui.calorietracker.domain.EntrySource
+import live.hisui.calorietracker.domain.FoodSource
+import live.hisui.calorietracker.domain.Meal
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull

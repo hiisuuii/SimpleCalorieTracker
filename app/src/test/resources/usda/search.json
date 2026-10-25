@@ -1,0 +1,46 @@
+{
+  "totalHits": 4,
+  "foods": [
+    {
+      "fdcId": 171077,
+      "description": "Chicken, broilers or fryers, breast, meat only, cooked, roasted",
+      "dataType": "SR Legacy",
+      "foodNutrients": [
+        {"nutrientId": 1003, "nutrientName": "Protein", "unitName": "G", "value": 31.02},
+        {"nutrientId": 1004, "nutrientName": "Total lipid (fat)", "unitName": "G", "value": 3.57},
+        {"nutrientId": 1005, "nutrientName": "Carbohydrate, by difference", "unitName": "G", "value": 0.0},
+        {"nutrientId": 1008, "nutrientName": "Energy", "unitName": "KCAL", "value": 165.0}
+      ]
+    },
+    {
+      "fdcId": 2646170,
+      "description": "Rice, white, long-grain, cooked",
+      "dataType": "Foundation",
+      "foodNutrients": [
+        {"nutrientId": 1003, "nutrientName": "Protein", "unitName": "G", "value": 2.69},
+        {"nutrientId": 2047, "nutrientName": "Energy (Atwater General Factors)", "unitName": "KCAL", "value": 130.0}
+      ]
+    },
+    {
+      "fdcId": 1105904,
+      "description": "CHEDDAR CHEESE",
+      "dataType": "Branded",
+      "brandOwner": "Acme Dairy",
+      "gtinUpc": "012345678905",
+      "servingSize": 28.0,
+      "servingSizeUnit": "g",
+      "householdServingFullText": "1 slice",
+      "foodNutrients": [
+        {"nutrientId": 1008, "nutrientName": "Energy", "unitName": "KCAL", "value": 400.0}
+      ]
+    },
+    {
+      "fdcId": 999,
+      "description": "Mystery food with no energy value",
+      "dataType": "Branded",
+      "foodNutrients": [
+        {"nutrientId": 1003, "nutrientName": "Protein", "unitName": "G", "value": 5.0}
+      ]
+    }
+  ]
+}
