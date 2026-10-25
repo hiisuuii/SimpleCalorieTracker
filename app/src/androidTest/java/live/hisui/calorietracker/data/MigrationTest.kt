@@ -4,7 +4,9 @@ import androidx.room.testing.MigrationTestHelper
 import androidx.test.platform.app.InstrumentationRegistry
 import live.hisui.calorietracker.data.db.AppDatabase
 import live.hisui.calorietracker.data.db.MIGRATION_1_2
+import live.hisui.calorietracker.data.db.MIGRATION_2_3
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -26,7 +28,25 @@ class MigrationTest {
         assertEquals(listOf("1 2 pieces", "1 cup", "1 hamburger bun"), labels)
     }
 
+    @Test
+    fun migrationFrom2AddsGroupColumnsAndKeepsEntries() {
+        helper.createDatabase(DB_V2, 2).apply {
+            execSQL("INSERT INTO log_entry (id, logged_at, tz_id, log_date, meal, name, kcal, source) VALUES (1, 0, 'UTC', '2026-10-20', 'LUNCH', 'Toast', 100, 'QUICK_ADD')")
+            close()
+        }
+
+        val db = helper.runMigrationsAndValidate(DB_V2, 3, true, MIGRATION_2_3)
+
+        db.query("SELECT name, group_id, group_name FROM log_entry").use { c ->
+            assertTrue(c.moveToFirst())
+            assertEquals("Toast", c.getString(0))
+            assertTrue(c.isNull(1))
+            assertTrue(c.isNull(2))
+        }
+    }
+
     private companion object {
         const val DB = "migration-test"
+        const val DB_V2 = "migration-test-v2"
     }
 }

@@ -55,6 +55,8 @@ class DayViewModel @Inject constructor(
 
     fun delete(entry: LogEntry) = viewModelScope.launch { log.delete(entry) }
 
+    fun deleteGroup(groupId: String) = viewModelScope.launch { log.deleteGroup(groupId) }
+
     fun saveAsMeal(name: String, entries: List<LogEntry>) = viewModelScope.launch {
         val saved = savedMeals.saveFromEntries(name.trim().ifBlank { "Saved meal" }, entries)
         messageChannel.send(if (saved) "Saved meal" else "Quick-add entries can't be saved as a meal")

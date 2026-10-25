@@ -30,7 +30,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 
-private object OfflineUsda : UsdaApi {
+internal object OfflineUsda : UsdaApi {
     override suspend fun search(query: String, dataTypes: String, pageSize: Int, apiKey: String): UsdaSearchResponse =
         throw IOException("offline")
 

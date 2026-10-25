@@ -3,6 +3,7 @@ package live.hisui.calorietracker.data
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
+import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.delay
@@ -55,19 +56,30 @@ class LogRepository @Inject constructor(
         MealTagger.mealFor(clock.instant().atZone(clock.zone).toLocalTime(), settings.current())
 
     suspend fun logFood(food: Food, grams: Double, meal: Meal, source: EntrySource = EntrySource.MANUAL): Long {
-        val n = Nutrition(food.kcalPer100g, food.proteinPer100g, food.carbsPer100g, food.fatPer100g).scaledTo(grams)
         val now = clock.instant()
-        val id = log.insert(
-            newEntry(now, meal, food.name, n.kcal, source).copy(
-                grams = grams,
-                proteinG = n.proteinG,
-                carbsG = n.carbsG,
-                fatG = n.fatG,
-                foodId = food.id,
-            ),
-        )
+        val id = log.insert(foodEntry(food, grams, meal, source, now))
         foods.touch(food.id, now.toEpochMilli())
         return id
+    }
+
+    suspend fun logGroup(name: String, items: List<Pair<Food, Double>>, meal: Meal) {
+        val now = clock.instant()
+        val groupId = UUID.randomUUID().toString()
+        log.insertAll(items.map { (food, grams) -> foodEntry(food, grams, meal, EntrySource.MANUAL, now).copy(groupId = groupId, groupName = name) })
+        items.forEach { (food, _) -> foods.touch(food.id, now.toEpochMilli()) }
+    }
+
+    suspend fun deleteGroup(groupId: String) = log.deleteGroup(groupId)
+
+    private suspend fun foodEntry(food: Food, grams: Double, meal: Meal, source: EntrySource, now: Instant): LogEntry {
+        val n = Nutrition(food.kcalPer100g, food.proteinPer100g, food.carbsPer100g, food.fatPer100g).scaledTo(grams)
+        return newEntry(now, meal, food.name, n.kcal, source).copy(
+            grams = grams,
+            proteinG = n.proteinG,
+            carbsG = n.carbsG,
+            fatG = n.fatG,
+            foodId = food.id,
+        )
     }
 
     suspend fun quickAdd(label: String, kcal: Double, meal: Meal): Long =

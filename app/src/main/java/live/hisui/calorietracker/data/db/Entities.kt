@@ -110,6 +110,9 @@ data class LogEntry(
     @ColumnInfo(name = "fat_g") val fatG: Double? = null,
     val source: EntrySource,
     @ColumnInfo(name = "food_id") val foodId: Long? = null,
+    // Entries logged together as one built meal share a group; the group carries no calories of its own.
+    @ColumnInfo(name = "group_id") val groupId: String? = null,
+    @ColumnInfo(name = "group_name") val groupName: String? = null,
 )
 
 fun LogEntry.withGrams(newGrams: Double): LogEntry {

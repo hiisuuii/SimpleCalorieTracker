@@ -63,6 +63,38 @@ class UiFlowsTest {
         compose.onNodeWithText("Rolled oats").assertExists()
     }
 
+    private fun addIngredient(query: String, food: String, grams: String) {
+        compose.onNodeWithText("Add food").performClick()
+        compose.onNodeWithText("Search foods").performTextInput(query)
+        waitForText(food)
+        compose.onNodeWithText(food).performClick()
+        waitForText("Amount")
+        compose.onNodeWithText("Amount").performTextReplacement(grams)
+        compose.onNodeWithText("Add to meal").performClick()
+        waitForText("Add food")
+    }
+
+    @Test
+    fun buildAMealAndExpandItInTheLog() {
+        runBlocking {
+            foodDao.insert(Food(name = "Shredded chicken", source = FoodSource.CUSTOM, kcalPer100g = 165.0))
+            foodDao.insert(Food(name = "Hamburger bun", source = FoodSource.CUSTOM, kcalPer100g = 250.0))
+        }
+
+        compose.onNodeWithContentDescription("Log food").performClick()
+        compose.onNodeWithText("Build a meal").performClick()
+        compose.onNodeWithText("Meal name").performTextInput("Chicken sandwich")
+        addIngredient("chick", "Shredded chicken", "100")
+        addIngredient("bun", "Hamburger bun", "50")
+        compose.onNodeWithText("Log meal").performClick()
+
+        waitForText("290 / 2000 kcal")
+        compose.onNodeWithText("Shredded chicken").assertDoesNotExist()
+        compose.onNodeWithText("Chicken sandwich").performClick()
+        waitForText("Shredded chicken")
+        compose.onNodeWithText("Hamburger bun").assertExists()
+    }
+
     @Test
     fun editAnEntry() {
         val today = DayBoundary.logDate(Instant.now(), ZoneId.systemDefault(), rolloverHour = 4).toString()

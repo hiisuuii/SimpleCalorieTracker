@@ -45,10 +45,11 @@ fun AddScreen(
     onFood: (Long) -> Unit,
     onQuickAdd: () -> Unit,
     onCustomFood: () -> Unit,
-    onSentence: () -> Unit,
+    onBuildMeal: () -> Unit,
     onScanBarcode: () -> Unit,
     onScanLabel: () -> Unit,
     onLogged: () -> Unit,
+    picking: Boolean,
     viewModel: AddViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -57,7 +58,7 @@ fun AddScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Log food") },
+                title = { Text(if (picking) "Add food to meal" else "Log food") },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } },
             )
         },
@@ -76,23 +77,25 @@ fun AddScreen(
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
-            item {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = onSentence, modifier = Modifier.weight(1f)) { Text("Describe a meal") }
-                    Button(onClick = onScanBarcode, modifier = Modifier.weight(1f)) { Text("Scan barcode") }
+            if (!picking) {
+                item {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(onClick = onBuildMeal, modifier = Modifier.weight(1f)) { Text("Build a meal") }
+                        Button(onClick = onScanBarcode, modifier = Modifier.weight(1f)) { Text("Scan barcode") }
+                    }
                 }
-            }
-            item {
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = onQuickAdd) { Text("Quick add") }
-                    OutlinedButton(onClick = onScanLabel) { Text("Scan label") }
-                    OutlinedButton(onClick = onCustomFood) { Text("Custom food") }
+                item {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(onClick = onQuickAdd) { Text("Quick add") }
+                        OutlinedButton(onClick = onScanLabel) { Text("Scan label") }
+                        OutlinedButton(onClick = onCustomFood) { Text("Custom food") }
+                    }
                 }
             }
             if (searching) {
                 searchResults(state, viewModel, onFood)
             } else {
-                browse(state, viewModel, onFood, onLogged)
+                browse(state, viewModel, onFood, onLogged, picking)
             }
         }
     }
@@ -123,8 +126,9 @@ private fun androidx.compose.foundation.lazy.LazyListScope.browse(
     viewModel: AddViewModel,
     onFood: (Long) -> Unit,
     onLogged: () -> Unit,
+    picking: Boolean,
 ) {
-    if (state.savedMeals.isNotEmpty()) {
+    if (!picking && state.savedMeals.isNotEmpty()) {
         item { Text("Saved meals", style = MaterialTheme.typography.titleMedium) }
         items(state.savedMeals, key = { "meal-${it.id}" }) { meal ->
             Row(
@@ -144,7 +148,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.browse(
             RecentRow(
                 entry,
                 onOpen = { entry.foodId?.let(onFood) },
-                onRelog = { viewModel.relog(entry, onLogged) },
+                onRelog = if (picking) null else ({ viewModel.relog(entry, onLogged) }),
             )
         }
     }
@@ -171,7 +175,7 @@ private fun FoodRow(food: Food, onClick: () -> Unit) {
 }
 
 @Composable
-private fun RecentRow(entry: LogEntry, onOpen: () -> Unit, onRelog: () -> Unit) {
+private fun RecentRow(entry: LogEntry, onOpen: () -> Unit, onRelog: (() -> Unit)?) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -187,6 +191,6 @@ private fun RecentRow(entry: LogEntry, onOpen: () -> Unit, onRelog: () -> Unit) 
                 style = MaterialTheme.typography.bodySmall,
             )
         }
-        IconButton(onClick = onRelog) { Icon(Icons.Default.Add, "Log again") }
+        if (onRelog != null) IconButton(onClick = onRelog) { Icon(Icons.Default.Add, "Log again") }
     }
 }

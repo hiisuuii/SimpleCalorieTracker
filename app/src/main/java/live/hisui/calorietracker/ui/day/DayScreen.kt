@@ -9,9 +9,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -37,9 +40,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlin.math.roundToInt
@@ -53,6 +56,24 @@ import live.hisui.calorietracker.ui.common.kcalText
 import live.hisui.calorietracker.ui.common.label
 import live.hisui.calorietracker.ui.common.macroText
 
+private sealed interface DayItem {
+    data class Single(val entry: LogEntry) : DayItem
+    data class Group(val id: String, val name: String, val entries: List<LogEntry>) : DayItem
+}
+
+private fun List<LogEntry>.toDayItems(): List<DayItem> {
+    val byGroup = filter { it.groupId != null }.groupBy { it.groupId!! }
+    val seen = mutableSetOf<String>()
+    return mapNotNull { e ->
+        val id = e.groupId
+        when {
+            id == null -> DayItem.Single(e)
+            seen.add(id) -> DayItem.Group(id, e.groupName ?: "Meal", byGroup.getValue(id))
+            else -> null
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DayScreen(onAdd: () -> Unit, onBack: (() -> Unit)?, viewModel: DayViewModel = hiltViewModel()) {
@@ -60,6 +81,8 @@ fun DayScreen(onAdd: () -> Unit, onBack: (() -> Unit)?, viewModel: DayViewModel 
     val snackbar = remember { SnackbarHostState() }
     var editing by remember { mutableStateOf<LogEntry?>(null) }
     var savingMeal by remember { mutableStateOf<List<LogEntry>?>(null) }
+    var deletingGroup by remember { mutableStateOf<DayItem.Group?>(null) }
+    var expanded by remember { mutableStateOf(emptySet<String>()) }
 
     LaunchedEffect(Unit) {
         viewModel.messages.collect { snackbar.showSnackbar(it) }
@@ -95,8 +118,18 @@ fun DayScreen(onAdd: () -> Unit, onBack: (() -> Unit)?, viewModel: DayViewModel 
                     item(key = "header-$meal") {
                         MealHeader(meal, rows.sumOf { it.kcal }, onSaveAsMeal = { savingMeal = rows })
                     }
-                    items(rows, key = { it.id }) { entry ->
-                        EntryRow(entry, state.useOunces, onClick = { editing = entry })
+                    items(rows.toDayItems(), key = { item -> if (item is DayItem.Group) "group-${item.id}" else "entry-${(item as DayItem.Single).entry.id}" }) { item ->
+                        when (item) {
+                            is DayItem.Single -> EntryRow(item.entry, state.useOunces, onClick = { editing = item.entry })
+                            is DayItem.Group -> GroupRow(
+                                group = item,
+                                expanded = item.id in expanded,
+                                useOunces = state.useOunces,
+                                onToggle = { expanded = if (item.id in expanded) expanded - item.id else expanded + item.id },
+                                onEdit = { editing = it },
+                                onDelete = { deletingGroup = item },
+                            )
+                        }
                     }
                 }
             }
@@ -127,6 +160,20 @@ fun DayScreen(onAdd: () -> Unit, onBack: (() -> Unit)?, viewModel: DayViewModel 
                 viewModel.saveAsMeal(it, rows)
                 savingMeal = null
             },
+        )
+    }
+    deletingGroup?.let { group ->
+        AlertDialog(
+            onDismissRequest = { deletingGroup = null },
+            title = { Text("Delete ${group.name}?") },
+            text = { Text("This removes the meal and its ${group.entries.size} foods from the day.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.deleteGroup(group.id)
+                    deletingGroup = null
+                }) { Text("Delete") }
+            },
+            dismissButton = { TextButton(onClick = { deletingGroup = null }) { Text("Cancel") } },
         )
     }
 }
@@ -188,6 +235,73 @@ private fun EntryRow(entry: LogEntry, useOunces: Boolean, onClick: () -> Unit) {
         Text(entry.kcal.kcalText(), style = MaterialTheme.typography.bodyLarge)
     }
 }
+
+@Composable
+private fun GroupRow(
+    group: DayItem.Group,
+    expanded: Boolean,
+    useOunces: Boolean,
+    onToggle: () -> Unit,
+    onEdit: (LogEntry) -> Unit,
+    onDelete: () -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onToggle)
+                .padding(vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(group.name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+                Text("${group.entries.size} foods", style = MaterialTheme.typography.bodySmall)
+            }
+            Text(group.entries.sumOf { it.kcal }.kcalText(), style = MaterialTheme.typography.bodyLarge)
+            Icon(
+                if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                if (expanded) "Collapse ${group.name}" else "Expand ${group.name}",
+            )
+        }
+        if (expanded) {
+            Column(modifier = Modifier.padding(start = 16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                group.entries.forEach { entry -> GroupChild(entry, useOunces, onClick = { onEdit(entry) }) }
+                Text(
+                    "Meal total: ${macroLine(group.entries.sumOfOrNull { it.proteinG }, group.entries.sumOfOrNull { it.carbsG }, group.entries.sumOfOrNull { it.fatG })}",
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                TextButton(onClick = onDelete) { Text("Delete meal") }
+            }
+        }
+    }
+}
+
+@Composable
+private fun GroupChild(entry: LogEntry, useOunces: Boolean, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(entry.name, style = MaterialTheme.typography.bodyMedium)
+            Text(
+                listOfNotNull(entry.grams?.gramsText(useOunces), macroLine(entry.proteinG, entry.carbsG, entry.fatG)).joinToString(" - "),
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+        Text(entry.kcal.kcalText(), style = MaterialTheme.typography.bodyMedium)
+    }
+}
+
+private fun macroLine(protein: Double?, carbs: Double?, fat: Double?) =
+    "protein ${protein?.macroText() ?: "-"} g, carbs ${carbs?.macroText() ?: "-"} g, fat ${fat?.macroText() ?: "-"} g"
+
+private fun List<LogEntry>.sumOfOrNull(selector: (LogEntry) -> Double?): Double? =
+    mapNotNull(selector).takeIf { it.isNotEmpty() }?.sum()
 
 @Composable
 private fun EditEntryDialog(

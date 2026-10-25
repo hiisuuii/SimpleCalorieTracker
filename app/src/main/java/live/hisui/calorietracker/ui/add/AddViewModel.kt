@@ -91,7 +91,7 @@ class AddViewModel @Inject constructor(
 
     fun logSavedMeal(meal: SavedMeal, onDone: () -> Unit) {
         viewModelScope.launch {
-            savedMeals.log(meal.id, log.mealNow())
+            savedMeals.log(meal, log.mealNow())
             onDone()
         }
     }

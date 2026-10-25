@@ -3,6 +3,7 @@ package live.hisui.calorietracker.data
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
+import live.hisui.calorietracker.data.db.Food
 import live.hisui.calorietracker.data.db.LogEntry
 import live.hisui.calorietracker.data.db.SavedMeal
 import live.hisui.calorietracker.data.db.SavedMealDao
@@ -17,6 +18,10 @@ class SavedMealRepository @Inject constructor(
 ) {
     val meals: Flow<List<SavedMeal>> = dao.meals()
 
+    suspend fun create(name: String, items: List<Pair<Food, Double>>) {
+        dao.create(name, items.map { (food, grams) -> SavedMealItem(savedMealId = 0, foodId = food.id, grams = grams) })
+    }
+
     // Quick-add entries have no food to point at, so they cannot be part of a saved meal.
     suspend fun saveFromEntries(name: String, entries: List<LogEntry>): Boolean {
         val items = entries.mapNotNull { e ->
@@ -29,10 +34,9 @@ class SavedMealRepository @Inject constructor(
         return true
     }
 
-    suspend fun log(mealId: Long, meal: Meal) {
-        dao.items(mealId).forEach { item ->
-            foods.get(item.foodId)?.let { log.logFood(it, item.grams, meal) }
-        }
+    suspend fun log(meal: SavedMeal, slot: Meal) {
+        val items = dao.items(meal.id).mapNotNull { item -> foods.get(item.foodId)?.let { it to item.grams } }
+        if (items.isNotEmpty()) log.logGroup(meal.name, items, slot)
     }
 
     suspend fun delete(id: Long) = dao.delete(id)

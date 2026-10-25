@@ -24,13 +24,13 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import live.hisui.calorietracker.ui.add.AddScreen
 import live.hisui.calorietracker.ui.barcode.BarcodeScreen
+import live.hisui.calorietracker.ui.build.BuildMealScreen
 import live.hisui.calorietracker.ui.custom.CustomFoodScreen
 import live.hisui.calorietracker.ui.day.DayScreen
 import live.hisui.calorietracker.ui.history.HistoryScreen
 import live.hisui.calorietracker.ui.label.LabelScreen
 import live.hisui.calorietracker.ui.portion.PortionScreen
 import live.hisui.calorietracker.ui.quickadd.QuickAddScreen
-import live.hisui.calorietracker.ui.sentence.SentenceScreen
 import live.hisui.calorietracker.ui.settings.AboutScreen
 import live.hisui.calorietracker.ui.settings.SettingsScreen
 
@@ -40,12 +40,12 @@ private object Route {
     const val HISTORY = "history"
     const val SETTINGS = "settings"
     const val ABOUT = "about"
-    const val ADD = "add"
+    const val ADD = "add?pick={pick}"
+    const val BUILD = "build"
     const val BARCODE = "barcode"
     const val LABEL = "label?barcode={barcode}"
-    const val PORTION = "portion/{foodId}?source={source}"
+    const val PORTION = "portion/{foodId}?source={source}&pick={pick}"
     const val QUICK_ADD = "quickadd"
-    const val SENTENCE = "sentence"
     const val CUSTOM = "custom?foodId={foodId}&barcode={barcode}"
 }
 
@@ -95,7 +95,7 @@ fun AppNav(requestedRoute: String?, onRouteHandled: () -> Unit) {
     ) { padding ->
         NavHost(nav, startDestination = Route.DAY, modifier = Modifier.padding(padding)) {
             composable(Route.DAY) {
-                DayScreen(onAdd = { nav.navigate(Route.ADD) }, onBack = null)
+                DayScreen(onAdd = { nav.navigate("add") }, onBack = null)
             }
             composable(Route.PAST_DAY) {
                 DayScreen(onAdd = {}, onBack = { nav.popBackStack() })
@@ -109,15 +109,24 @@ fun AppNav(requestedRoute: String?, onRouteHandled: () -> Unit) {
             composable(Route.ABOUT) {
                 AboutScreen(onBack = { nav.popBackStack() })
             }
-            composable(Route.ADD) {
+            composable(Route.ADD, arguments = listOf(navArgument("pick") { type = NavType.BoolType; defaultValue = false })) { entry ->
+                val picking = entry.arguments?.getBoolean("pick") ?: false
                 AddScreen(
                     onBack = { nav.popBackStack() },
-                    onFood = { nav.navigate("portion/$it") },
+                    onFood = { nav.navigate("portion/$it?pick=$picking") },
                     onQuickAdd = { nav.navigate(Route.QUICK_ADD) },
                     onCustomFood = { nav.navigate("custom") },
-                    onSentence = { nav.navigate(Route.SENTENCE) },
+                    onBuildMeal = { nav.navigate(Route.BUILD) },
                     onScanBarcode = { nav.navigate(Route.BARCODE) },
                     onScanLabel = { nav.navigate("label") },
+                    onLogged = { backToDay() },
+                    picking = picking,
+                )
+            }
+            composable(Route.BUILD) {
+                BuildMealScreen(
+                    onBack = { nav.popBackStack() },
+                    onAddIngredient = { nav.navigate("add?pick=true") },
                     onLogged = { backToDay() },
                 )
             }
@@ -138,20 +147,19 @@ fun AppNav(requestedRoute: String?, onRouteHandled: () -> Unit) {
                     onSaved = { id -> nav.navigate("portion/$id?source=label") { popUpTo(Route.ADD) } },
                 )
             }
-            composable(Route.SENTENCE) {
-                SentenceScreen(onBack = { nav.popBackStack() }, onLogged = { backToDay() })
-            }
             composable(
                 Route.PORTION,
                 arguments = listOf(
                     navArgument("foodId") { type = NavType.LongType },
                     navArgument("source") { defaultValue = "manual" },
+                    navArgument("pick") { type = NavType.BoolType; defaultValue = false },
                 ),
-            ) {
+            ) { entry ->
+                val picking = entry.arguments?.getBoolean("pick") ?: false
                 PortionScreen(
                     onBack = { nav.popBackStack() },
                     onEdit = { nav.navigate("custom?foodId=$it") },
-                    onLogged = { backToDay() },
+                    onLogged = { if (picking) nav.popBackStack(Route.BUILD, inclusive = false) else backToDay() },
                 )
             }
             composable(Route.QUICK_ADD) {

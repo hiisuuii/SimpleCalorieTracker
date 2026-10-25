@@ -19,6 +19,7 @@ import live.hisui.calorietracker.domain.EntrySource
 import live.hisui.calorietracker.domain.GRAMS_PER_OUNCE
 import live.hisui.calorietracker.domain.Meal
 import live.hisui.calorietracker.domain.Nutrition
+import live.hisui.calorietracker.ui.build.MealDraft
 
 data class PortionUiState(
     val food: Food? = null,
@@ -52,8 +53,10 @@ class PortionViewModel @Inject constructor(
     private val foods: FoodRepository,
     private val log: LogRepository,
     private val settings: SettingsRepository,
+    private val draft: MealDraft,
 ) : ViewModel() {
     private val foodId: Long = checkNotNull(handle["foodId"])
+    val picking: Boolean = handle["pick"] ?: false
     private val source = handle.get<String>("source")?.let { EntrySource.valueOf(it.uppercase()) } ?: EntrySource.MANUAL
     private val _state = MutableStateFlow(PortionUiState())
     val state: StateFlow<PortionUiState> = _state.asStateFlow()
@@ -97,6 +100,11 @@ class PortionViewModel @Inject constructor(
         val s = _state.value
         val food = s.food ?: return
         val grams = s.grams ?: return
+        if (picking) {
+            draft.add(food, grams)
+            onDone()
+            return
+        }
         viewModelScope.launch {
             log.logFood(food, grams, s.meal, source)
             onDone()

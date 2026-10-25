@@ -63,6 +63,7 @@ class BackupTest {
         val entry = LogEntry(
             loggedAt = 1_700_000_000_000, tzId = "America/Denver", logDate = "2026-10-20", meal = Meal.DINNER,
             name = "Chicken, roasted", grams = 150.0, kcal = 247.5, source = EntrySource.TEXT, foodId = foodId,
+            groupId = "group-1", groupName = "Chicken dinner",
         )
         return entry.copy(id = db.logDao().insert(entry))
     }

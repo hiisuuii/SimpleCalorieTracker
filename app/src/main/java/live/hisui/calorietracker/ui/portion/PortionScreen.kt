@@ -106,7 +106,7 @@ fun PortionScreen(
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
-            MealChips(state.meal, viewModel::setMeal)
+            if (!viewModel.picking) MealChips(state.meal, viewModel::setMeal)
 
             state.nutrition?.let { n ->
                 TextButton(onClick = viewModel::toggleMacros) { Text(if (state.showMacros) "Hide macros" else "Show macros") }
@@ -121,7 +121,7 @@ fun PortionScreen(
                 onClick = { viewModel.log(onLogged) },
                 enabled = state.grams != null,
                 modifier = Modifier.fillMaxWidth(),
-            ) { Text("Log") }
+            ) { Text(if (viewModel.picking) "Add to meal" else "Log") }
         }
     }
 }

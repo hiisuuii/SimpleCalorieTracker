@@ -27,8 +27,11 @@ interface LogDao {
     @Query("SELECT * FROM log_entry WHERE id = :id")
     suspend fun byId(id: Long): LogEntry?
 
-    @Query("SELECT * FROM log_entry WHERE log_date = :date ORDER BY logged_at")
+    @Query("SELECT * FROM log_entry WHERE log_date = :date ORDER BY logged_at, id")
     fun entriesForDate(date: String): Flow<List<LogEntry>>
+
+    @Query("DELETE FROM log_entry WHERE group_id = :groupId")
+    suspend fun deleteGroup(groupId: String)
 
     @Query("SELECT COALESCE(SUM(kcal), 0) FROM log_entry WHERE log_date = :date")
     fun totalForDate(date: String): Flow<Double>
