@@ -27,6 +27,7 @@ import live.hisui.calorietracker.ui.day.DayScreen
 import live.hisui.calorietracker.ui.history.HistoryScreen
 import live.hisui.calorietracker.ui.portion.PortionScreen
 import live.hisui.calorietracker.ui.quickadd.QuickAddScreen
+import live.hisui.calorietracker.ui.sentence.SentenceScreen
 import live.hisui.calorietracker.ui.settings.AboutScreen
 import live.hisui.calorietracker.ui.settings.SettingsScreen
 
@@ -39,6 +40,7 @@ private object Route {
     const val ADD = "add"
     const val PORTION = "portion/{foodId}"
     const val QUICK_ADD = "quickadd"
+    const val SENTENCE = "sentence"
     const val CUSTOM = "custom?foodId={foodId}"
 }
 
@@ -101,8 +103,12 @@ fun AppNav() {
                     onFood = { nav.navigate("portion/$it") },
                     onQuickAdd = { nav.navigate(Route.QUICK_ADD) },
                     onCustomFood = { nav.navigate("custom") },
+                    onSentence = { nav.navigate(Route.SENTENCE) },
                     onLogged = { backToDay() },
                 )
+            }
+            composable(Route.SENTENCE) {
+                SentenceScreen(onBack = { nav.popBackStack() }, onLogged = { backToDay() })
             }
             composable(Route.PORTION, arguments = listOf(navArgument("foodId") { type = NavType.LongType })) {
                 PortionScreen(

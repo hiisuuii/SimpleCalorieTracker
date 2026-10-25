@@ -61,6 +61,9 @@ class FoodRepository @Inject constructor(
         return candidate.food.copy(id = id)
     }
 
+    suspend fun materialize(candidate: FoodCandidate): Food =
+        if (candidate.food.id != 0L) candidate.food else saveUsdaCandidate(candidate)
+
     suspend fun saveCustom(food: Food, portions: List<Portion>): Long {
         if (food.id == 0L) return foods.insertWithPortions(food, portions)
         foods.update(food)

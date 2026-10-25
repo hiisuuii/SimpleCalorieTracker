@@ -7,6 +7,7 @@ object PortionConverter {
     private val genericGrams = mapOf(
         "g" to 1.0,
         "gram" to 1.0,
+        "kg" to 1000.0,
         "ml" to 1.0,
         "oz" to GRAMS_PER_OUNCE,
         "ounce" to GRAMS_PER_OUNCE,
@@ -20,7 +21,7 @@ object PortionConverter {
     )
 
     fun toGrams(quantity: Double, unit: String, portions: List<PortionOption>): Double? {
-        val wanted = singular(unit.lowercase().trim().trimEnd('.'))
+        val wanted = Words.singular(unit.lowercase().trim().trimEnd('.'))
         if (wanted.isEmpty()) return null
         val matched = portions.firstOrNull { words(it.label).firstOrNull() == wanted }
             ?: portions.firstOrNull { wanted in words(it.label) }
@@ -28,13 +29,12 @@ object PortionConverter {
         return quantity * gramsPerUnit
     }
 
-    private fun words(label: String): List<String> =
-        Regex("[a-z]+").findAll(label.lowercase()).map { singular(it.value) }.toList()
+    // Portions are stored per one unit ("1 medium"), so the first of these wins when a count has no unit.
+    private val preferredCountPortions = listOf("medium", "large", "serving")
 
-    private fun singular(word: String): String = when {
-        word.endsWith("ies") && word.length > 4 -> word.dropLast(3) + "y"
-        listOf("ches", "shes", "xes", "sses").any { word.endsWith(it) } -> word.dropLast(2)
-        word.endsWith("s") && !word.endsWith("ss") && word.length > 2 -> word.dropLast(1)
-        else -> word
-    }
+    fun defaultCountPortion(portions: List<PortionOption>): PortionOption? =
+        preferredCountPortions.firstNotNullOfOrNull { wanted -> portions.firstOrNull { wanted in words(it.label) } }
+            ?: portions.firstOrNull()
+
+    private fun words(label: String): List<String> = Words.tokens(label)
 }

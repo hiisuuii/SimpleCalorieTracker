@@ -13,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -42,6 +43,7 @@ fun AddScreen(
     onFood: (Long) -> Unit,
     onQuickAdd: () -> Unit,
     onCustomFood: () -> Unit,
+    onSentence: () -> Unit,
     onLogged: () -> Unit,
     viewModel: AddViewModel = hiltViewModel(),
 ) {
@@ -69,6 +71,9 @@ fun AddScreen(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
+            }
+            item {
+                Button(onClick = onSentence, modifier = Modifier.fillMaxWidth()) { Text("Describe a meal") }
             }
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
