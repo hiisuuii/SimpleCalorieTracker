@@ -17,18 +17,31 @@ android {
         applicationId = "live.hisui.calorietracker"
         minSdk = 26
         targetSdk = 37
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = providers.gradleProperty("versionCode").map(String::toInt).getOrElse(1)
+        versionName = providers.gradleProperty("versionName").getOrElse("1.0")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    // The keystore never lives in the repo: CI and local release builds pass it in through the environment.
+    val releaseKeystore = providers.environmentVariable("RELEASE_STORE_FILE").orNull
+    if (releaseKeystore != null) {
+        signingConfigs {
+            create("release") {
+                storeFile = file(releaseKeystore)
+                storePassword = providers.environmentVariable("RELEASE_STORE_PASSWORD").get()
+                keyAlias = providers.environmentVariable("RELEASE_KEY_ALIAS").get()
+                keyPassword = providers.environmentVariable("RELEASE_KEY_PASSWORD").get()
+            }
+        }
     }
 
     buildTypes {
         release {
             optimization {
                 enable = true
-                packageScope = setOf("androidx.**", "kotlin.**", "kotlinx.**")
             }
+            if (releaseKeystore != null) signingConfig = signingConfigs.getByName("release")
         }
     }
     compileOptions {
