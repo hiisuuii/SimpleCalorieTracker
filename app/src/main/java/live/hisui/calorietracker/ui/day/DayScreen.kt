@@ -42,7 +42,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -90,7 +89,6 @@ fun DayScreen(onAdd: () -> Unit, onBack: (() -> Unit)?, viewModel: DayViewModel 
     var deletingGroup by remember { mutableStateOf<DayItem.Group?>(null) }
     var renamingGroup by remember { mutableStateOf<DayItem.Group?>(null) }
     var expanded by remember { mutableStateOf(emptySet<String>()) }
-    var collapsedMeals by rememberSaveable { mutableStateOf(emptyList<String>()) }
 
     LaunchedEffect(Unit) {
         viewModel.messages.collect { snackbar.showSnackbar(it) }
@@ -129,10 +127,8 @@ fun DayScreen(onAdd: () -> Unit, onBack: (() -> Unit)?, viewModel: DayViewModel 
                             meal = meal,
                             kcal = rows.sumOf { it.kcal },
                             itemCount = dayItems.size,
-                            collapsed = meal.name in collapsedMeals,
-                            onToggle = {
-                                collapsedMeals = if (meal.name in collapsedMeals) collapsedMeals - meal.name else collapsedMeals + meal.name
-                            },
+                            collapsed = meal in state.collapsedMeals,
+                            onToggle = { viewModel.setCollapsed(meal, meal !in state.collapsedMeals) },
                             onSaveAsMeal = { savingMeal = rows },
                         ) {
                             dayItems.forEach { item ->

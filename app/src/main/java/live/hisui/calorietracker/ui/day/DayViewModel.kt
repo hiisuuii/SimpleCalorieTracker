@@ -20,6 +20,7 @@ import live.hisui.calorietracker.data.LogRepository
 import live.hisui.calorietracker.data.SavedMealRepository
 import live.hisui.calorietracker.data.SettingsRepository
 import live.hisui.calorietracker.data.db.LogEntry
+import live.hisui.calorietracker.domain.Meal
 
 data class DayUiState(
     val date: LocalDate? = null,
@@ -28,6 +29,7 @@ data class DayUiState(
     val total: Double = 0.0,
     val target: Int = 2000,
     val useOunces: Boolean = false,
+    val collapsedMeals: Set<Meal> = emptySet(),
 )
 
 @HiltViewModel
@@ -35,21 +37,23 @@ class DayViewModel @Inject constructor(
     handle: SavedStateHandle,
     private val log: LogRepository,
     private val savedMeals: SavedMealRepository,
-    settings: SettingsRepository,
+    private val settings: SettingsRepository,
 ) : ViewModel() {
     private val fixedDate = handle.get<String>("date")?.let(LocalDate::parse)
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val state: StateFlow<DayUiState> = (fixedDate?.let { flowOf(it) } ?: log.currentLogDate)
         .flatMapLatest { date ->
-            combine(log.entriesForDate(date), log.totalForDate(date), settings.settings) { entries, total, s ->
-                DayUiState(date, fixedDate == null, entries, total, s.dailyTarget, s.useOunces)
+            combine(log.entriesForDate(date), log.totalForDate(date), settings.settings, settings.collapsedMeals) { entries, total, s, collapsed ->
+                DayUiState(date, fixedDate == null, entries, total, s.dailyTarget, s.useOunces, collapsed)
             }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DayUiState())
 
     private val messageChannel = Channel<String>(Channel.BUFFERED)
     val messages = messageChannel.receiveAsFlow()
+
+    fun setCollapsed(meal: Meal, collapsed: Boolean) = viewModelScope.launch { settings.setMealCollapsed(meal, collapsed) }
 
     fun save(entry: LogEntry) = viewModelScope.launch { log.update(entry) }
 

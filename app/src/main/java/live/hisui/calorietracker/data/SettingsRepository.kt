@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import java.time.LocalTime
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -15,6 +16,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
+import live.hisui.calorietracker.domain.Meal
 import live.hisui.calorietracker.domain.Reminder
 import live.hisui.calorietracker.domain.Settings
 
@@ -34,6 +36,16 @@ class SettingsRepository @Inject constructor(
     private val middayFraction = doublePreferencesKey("midday_fraction")
     private val notifyOver = booleanPreferencesKey("notify_over")
     private val reminderSerializer = ListSerializer(Reminder.serializer())
+
+    private val collapsed = stringSetPreferencesKey("collapsed_meals")
+
+    val collapsedMeals: Flow<Set<Meal>> = store.data.map { p ->
+        p[collapsed].orEmpty().mapNotNull { name -> Meal.entries.firstOrNull { it.name == name } }.toSet()
+    }
+
+    suspend fun setMealCollapsed(meal: Meal, isCollapsed: Boolean) {
+        store.edit { p -> p[collapsed] = p[collapsed].orEmpty().let { if (isCollapsed) it + meal.name else it - meal.name } }
+    }
 
     val settings: Flow<Settings> = store.data.map { p ->
         val d = Settings()
