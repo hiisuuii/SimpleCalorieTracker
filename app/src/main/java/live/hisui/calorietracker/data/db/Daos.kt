@@ -42,6 +42,9 @@ interface LogDao {
     @Query("SELECT * FROM log_entry ORDER BY logged_at")
     suspend fun all(): List<LogEntry>
 
+    @Query("DELETE FROM log_entry")
+    suspend fun deleteAll()
+
     @Query(
         "SELECT * FROM log_entry WHERE id IN " +
             "(SELECT MAX(id) FROM log_entry WHERE food_id IS NOT NULL GROUP BY food_id) " +
@@ -98,6 +101,12 @@ interface FoodDao {
     suspend fun all(): List<Food>
 
     @Insert
+    suspend fun insertAll(foods: List<Food>)
+
+    @Query("DELETE FROM food")
+    suspend fun deleteAll()
+
+    @Insert
     suspend fun insertPortions(portions: List<Portion>)
 
     @Query("DELETE FROM portion WHERE food_id = :foodId")
@@ -133,6 +142,12 @@ interface AliasDao {
 
     @Query("SELECT * FROM alias")
     suspend fun all(): List<Alias>
+
+    @Insert
+    suspend fun insertAll(aliases: List<Alias>)
+
+    @Query("DELETE FROM alias")
+    suspend fun deleteAll()
 }
 
 @Dao
@@ -157,6 +172,12 @@ interface SavedMealDao {
 
     @Query("SELECT * FROM saved_meal_item")
     suspend fun allItems(): List<SavedMealItem>
+
+    @Insert
+    suspend fun insertMeals(meals: List<SavedMeal>)
+
+    @Query("DELETE FROM saved_meal")
+    suspend fun deleteAll()
 
     @Transaction
     suspend fun create(name: String, items: List<SavedMealItem>): Long {

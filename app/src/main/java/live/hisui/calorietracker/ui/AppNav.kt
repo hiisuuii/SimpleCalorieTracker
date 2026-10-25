@@ -12,6 +12,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -55,11 +56,18 @@ private val topLevel = listOf(
 )
 
 @Composable
-fun AppNav() {
+fun AppNav(requestedRoute: String?, onRouteHandled: () -> Unit) {
     val nav = rememberNavController()
     val current by nav.currentBackStackEntryAsState()
     val route = current?.destination?.route
     val backToDay = { nav.popBackStack(Route.DAY, inclusive = false) }
+
+    LaunchedEffect(requestedRoute) {
+        if (requestedRoute != null) {
+            nav.navigate(requestedRoute) { popUpTo(Route.DAY) }
+            onRouteHandled()
+        }
+    }
 
     Scaffold(
         contentWindowInsets = WindowInsets(0),

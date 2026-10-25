@@ -10,4 +10,7 @@ data class Settings(
     val lunch: LocalTime = LocalTime.of(12, 30),
     val dinner: LocalTime = LocalTime.of(18, 30),
     val usdaApiKey: String = "",
+    val reminders: List<Reminder> = Reminder.defaults,
+    val middayFraction: Double = 0.3,
+    val notifyWhenOver: Boolean = false,
 )

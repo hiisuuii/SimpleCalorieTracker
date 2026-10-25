@@ -14,6 +14,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -21,6 +23,7 @@ import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -30,37 +33,24 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewModelScope
-import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
-import javax.inject.Inject
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
-import live.hisui.calorietracker.data.SettingsRepository
 import live.hisui.calorietracker.domain.Settings
-
-@HiltViewModel
-class SettingsViewModel @Inject constructor(private val repo: SettingsRepository) : ViewModel() {
-    val settings: StateFlow<Settings?> = repo.settings
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
-
-    fun update(change: Settings.() -> Settings) {
-        viewModelScope.launch { repo.update(repo.current().change()) }
-    }
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(onAbout: () -> Unit, viewModel: SettingsViewModel = hiltViewModel()) {
     val loaded by viewModel.settings.collectAsStateWithLifecycle()
     val settings = loaded
-    Scaffold(topBar = { TopAppBar(title = { Text("Settings") }) }) { padding ->
+    val snackbar = remember { SnackbarHostState() }
+    LaunchedEffect(Unit) { viewModel.messages.collect { snackbar.showSnackbar(it) } }
+
+    Scaffold(
+        topBar = { TopAppBar(title = { Text("Settings") }) },
+        snackbarHost = { SnackbarHost(snackbar) },
+    ) { padding ->
         if (settings == null) return@Scaffold
         var target by remember { mutableStateOf(settings.dailyTarget.toString()) }
         var apiKey by remember { mutableStateOf(settings.usdaApiKey) }
@@ -89,7 +79,7 @@ fun SettingsScreen(onAbout: () -> Unit, viewModel: SettingsViewModel = hiltViewM
                 Switch(settings.useOunces, { viewModel.update { copy(useOunces = it) } })
             }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text("Day starts at")
                     Text(
                         "Entries before this hour count toward the previous day",
@@ -115,6 +105,9 @@ fun SettingsScreen(onAbout: () -> Unit, viewModel: SettingsViewModel = hiltViewM
                     OutlinedButton(onClick = { pickingTime = meal }) { Text(meal.read(settings).format(TIME_FORMAT)) }
                 }
             }
+
+            RemindersSection(settings, viewModel)
+
             OutlinedTextField(
                 value = apiKey,
                 onValueChange = {
@@ -122,32 +115,41 @@ fun SettingsScreen(onAbout: () -> Unit, viewModel: SettingsViewModel = hiltViewM
                     viewModel.update { copy(usdaApiKey = it.trim()) }
                 },
                 label = { Text("USDA API key") },
-                supportingText = { Text("Free from api.data.gov. Without one, the shared demo key is used and is heavily rate limited.") },
+                supportingText = { Text("Free from api.data.gov. Without one, the shared demo key is used and allows only about 10 lookups an hour.") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
+
+            DataSection(viewModel)
             TextButton(onClick = onAbout) { Text("About") }
         }
 
         pickingTime?.let { meal ->
-            val current = meal.read(settings)
-            val pickerState = rememberTimePickerState(current.hour, current.minute, is24Hour = false)
-            AlertDialog(
-                onDismissRequest = { pickingTime = null },
-                text = { TimePicker(pickerState) },
-                confirmButton = {
-                    TextButton(onClick = {
-                        viewModel.update { meal.write(this, LocalTime.of(pickerState.hour, pickerState.minute)) }
-                        pickingTime = null
-                    }) { Text("OK") }
+            TimeDialog(
+                initial = meal.read(settings),
+                onConfirm = { time ->
+                    viewModel.update { meal.write(this, time) }
+                    pickingTime = null
                 },
-                dismissButton = { TextButton(onClick = { pickingTime = null }) { Text("Cancel") } },
+                onDismiss = { pickingTime = null },
             )
         }
     }
 }
 
-private val TIME_FORMAT = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TimeDialog(initial: LocalTime, onConfirm: (LocalTime) -> Unit, onDismiss: () -> Unit) {
+    val pickerState = rememberTimePickerState(initial.hour, initial.minute, is24Hour = false)
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        text = { TimePicker(pickerState) },
+        confirmButton = { TextButton(onClick = { onConfirm(LocalTime.of(pickerState.hour, pickerState.minute)) }) { Text("OK") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
+}
+
+val TIME_FORMAT: DateTimeFormatter = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
 private const val MAX_ROLLOVER_HOUR = 12
 
 private enum class MealTime(val label: String) {

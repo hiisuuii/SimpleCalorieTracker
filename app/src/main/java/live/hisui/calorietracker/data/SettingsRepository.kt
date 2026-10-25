@@ -3,6 +3,7 @@ package live.hisui.calorietracker.data
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -12,10 +13,16 @@ import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.json.Json
+import live.hisui.calorietracker.domain.Reminder
 import live.hisui.calorietracker.domain.Settings
 
 @Singleton
-class SettingsRepository @Inject constructor(private val store: DataStore<Preferences>) {
+class SettingsRepository @Inject constructor(
+    private val store: DataStore<Preferences>,
+    private val json: Json,
+) {
     private val target = intPreferencesKey("daily_target")
     private val ounces = booleanPreferencesKey("use_ounces")
     private val rollover = intPreferencesKey("rollover_hour")
@@ -23,6 +30,10 @@ class SettingsRepository @Inject constructor(private val store: DataStore<Prefer
     private val lunch = intPreferencesKey("lunch_minute")
     private val dinner = intPreferencesKey("dinner_minute")
     private val usdaKey = stringPreferencesKey("usda_api_key")
+    private val reminders = stringPreferencesKey("reminders")
+    private val middayFraction = doublePreferencesKey("midday_fraction")
+    private val notifyOver = booleanPreferencesKey("notify_over")
+    private val reminderSerializer = ListSerializer(Reminder.serializer())
 
     val settings: Flow<Settings> = store.data.map { p ->
         val d = Settings()
@@ -34,6 +45,9 @@ class SettingsRepository @Inject constructor(private val store: DataStore<Prefer
             lunch = p[lunch]?.toTime() ?: d.lunch,
             dinner = p[dinner]?.toTime() ?: d.dinner,
             usdaApiKey = p[usdaKey] ?: d.usdaApiKey,
+            reminders = p[reminders]?.let { json.decodeFromString(reminderSerializer, it) } ?: d.reminders,
+            middayFraction = p[middayFraction] ?: d.middayFraction,
+            notifyWhenOver = p[notifyOver] ?: d.notifyWhenOver,
         )
     }
 
@@ -48,6 +62,9 @@ class SettingsRepository @Inject constructor(private val store: DataStore<Prefer
             p[lunch] = settings.lunch.toMinutes()
             p[dinner] = settings.dinner.toMinutes()
             p[usdaKey] = settings.usdaApiKey
+            p[reminders] = json.encodeToString(reminderSerializer, settings.reminders)
+            p[middayFraction] = settings.middayFraction
+            p[notifyOver] = settings.notifyWhenOver
         }
     }
 }
