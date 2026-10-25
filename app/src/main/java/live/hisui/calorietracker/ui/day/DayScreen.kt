@@ -1,14 +1,17 @@
 package live.hisui.calorietracker.ui.day
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -18,6 +21,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -38,7 +42,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -84,6 +90,7 @@ fun DayScreen(onAdd: () -> Unit, onBack: (() -> Unit)?, viewModel: DayViewModel 
     var deletingGroup by remember { mutableStateOf<DayItem.Group?>(null) }
     var renamingGroup by remember { mutableStateOf<DayItem.Group?>(null) }
     var expanded by remember { mutableStateOf(emptySet<String>()) }
+    var collapsedMeals by rememberSaveable { mutableStateOf(emptyList<String>()) }
 
     LaunchedEffect(Unit) {
         viewModel.messages.collect { snackbar.showSnackbar(it) }
@@ -116,21 +123,32 @@ fun DayScreen(onAdd: () -> Unit, onBack: (() -> Unit)?, viewModel: DayViewModel 
             Meal.entries.forEach { meal ->
                 val rows = state.entries.filter { it.meal == meal }
                 if (rows.isNotEmpty()) {
-                    item(key = "header-$meal") {
-                        MealHeader(meal, rows.sumOf { it.kcal }, onSaveAsMeal = { savingMeal = rows })
-                    }
-                    items(rows.toDayItems(), key = { item -> if (item is DayItem.Group) "group-${item.id}" else "entry-${(item as DayItem.Single).entry.id}" }) { item ->
-                        when (item) {
-                            is DayItem.Single -> EntryRow(item.entry, state.useOunces, onClick = { editing = item.entry })
-                            is DayItem.Group -> GroupRow(
-                                group = item,
-                                expanded = item.id in expanded,
-                                useOunces = state.useOunces,
-                                onToggle = { expanded = if (item.id in expanded) expanded - item.id else expanded + item.id },
-                                onEdit = { editing = it },
-                                onRename = { renamingGroup = item },
-                                onDelete = { deletingGroup = item },
-                            )
+                    val dayItems = rows.toDayItems()
+                    item(key = "section-$meal") {
+                        MealSection(
+                            meal = meal,
+                            kcal = rows.sumOf { it.kcal },
+                            itemCount = dayItems.size,
+                            collapsed = meal.name in collapsedMeals,
+                            onToggle = {
+                                collapsedMeals = if (meal.name in collapsedMeals) collapsedMeals - meal.name else collapsedMeals + meal.name
+                            },
+                            onSaveAsMeal = { savingMeal = rows },
+                        ) {
+                            dayItems.forEach { item ->
+                                when (item) {
+                                    is DayItem.Single -> EntryRow(item.entry, state.useOunces, onClick = { editing = item.entry })
+                                    is DayItem.Group -> GroupRow(
+                                        group = item,
+                                        expanded = item.id in expanded,
+                                        useOunces = state.useOunces,
+                                        onToggle = { expanded = if (item.id in expanded) expanded - item.id else expanded + item.id },
+                                        onEdit = { editing = it },
+                                        onRename = { renamingGroup = item },
+                                        onDelete = { deletingGroup = item },
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -209,24 +227,57 @@ private fun SummaryCard(state: DayUiState) {
 }
 
 @Composable
-private fun MealHeader(meal: Meal, kcal: Double, onSaveAsMeal: () -> Unit) {
+private fun MealSection(
+    meal: Meal,
+    kcal: Double,
+    itemCount: Int,
+    collapsed: Boolean,
+    onToggle: () -> Unit,
+    onSaveAsMeal: () -> Unit,
+    content: @Composable ColumnScope.() -> Unit,
+) {
     var menu by remember { mutableStateOf(false) }
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
+    val title = if (collapsed) "${meal.label} ($itemCount ${if (itemCount == 1) "item" else "items"})" else meal.label
+    Card(
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+        modifier = Modifier
+            .fillMaxWidth()
+            .animateContentSize(),
     ) {
-        Text("${meal.label} - ${kcal.kcalText()}", style = MaterialTheme.typography.titleMedium)
-        Column {
-            IconButton(onClick = { menu = true }) { Icon(Icons.Default.MoreVert, "Meal options") }
-            DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                DropdownMenuItem(
-                    text = { Text("Save as meal") },
-                    onClick = {
-                        menu = false
-                        onSaveAsMeal()
-                    },
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onToggle),
+            ) {
+                Icon(
+                    if (collapsed) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowUp,
+                    if (collapsed) "Expand ${meal.label}" else "Collapse ${meal.label}",
                 )
+                Text(
+                    title,
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(start = 8.dp, top = 12.dp, bottom = 12.dp),
+                )
+                Text(kcal.kcalText(), style = MaterialTheme.typography.titleMedium)
+                Box {
+                    IconButton(onClick = { menu = true }) { Icon(Icons.Default.MoreVert, "Meal options") }
+                    DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                        DropdownMenuItem(
+                            text = { Text("Save as meal") },
+                            onClick = {
+                                menu = false
+                                onSaveAsMeal()
+                            },
+                        )
+                    }
+                }
             }
+            if (!collapsed) content()
         }
     }
 }

@@ -123,6 +123,32 @@ class UiFlowsTest {
     }
 
     @Test
+    fun aMealSectionCollapsesToACountAndExpandsAgain() {
+        val today = DayBoundary.logDate(Instant.now(), ZoneId.systemDefault(), rolloverHour = 4).toString()
+        runBlocking {
+            listOf("Toast" to 100.0, "Eggs" to 150.0).forEach { (name, kcal) ->
+                logDao.insert(
+                    LogEntry(
+                        loggedAt = System.currentTimeMillis(), tzId = ZoneId.systemDefault().id, logDate = today,
+                        meal = Meal.BREAKFAST, name = name, kcal = kcal, source = EntrySource.QUICK_ADD,
+                    ),
+                )
+            }
+        }
+
+        waitForText("Toast")
+        compose.onNodeWithContentDescription("Collapse Breakfast").performClick()
+        waitForText("Breakfast (2 items)")
+        compose.onNodeWithText("Toast").assertDoesNotExist()
+        compose.onNodeWithText("250 kcal").assertExists()
+
+        compose.onNodeWithContentDescription("Expand Breakfast").performClick()
+        waitForText("Toast")
+        compose.onNodeWithText("Eggs").assertExists()
+        compose.onNodeWithText("Breakfast (2 items)").assertDoesNotExist()
+    }
+
+    @Test
     fun changeTheDailyTarget() {
         compose.onNodeWithText("Settings").performClick()
         waitForText("Daily calorie target (kcal)")
