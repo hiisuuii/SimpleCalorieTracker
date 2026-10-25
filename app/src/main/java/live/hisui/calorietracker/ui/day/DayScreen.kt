@@ -82,6 +82,7 @@ fun DayScreen(onAdd: () -> Unit, onBack: (() -> Unit)?, viewModel: DayViewModel 
     var editing by remember { mutableStateOf<LogEntry?>(null) }
     var savingMeal by remember { mutableStateOf<List<LogEntry>?>(null) }
     var deletingGroup by remember { mutableStateOf<DayItem.Group?>(null) }
+    var renamingGroup by remember { mutableStateOf<DayItem.Group?>(null) }
     var expanded by remember { mutableStateOf(emptySet<String>()) }
 
     LaunchedEffect(Unit) {
@@ -127,6 +128,7 @@ fun DayScreen(onAdd: () -> Unit, onBack: (() -> Unit)?, viewModel: DayViewModel 
                                 useOunces = state.useOunces,
                                 onToggle = { expanded = if (item.id in expanded) expanded - item.id else expanded + item.id },
                                 onEdit = { editing = it },
+                                onRename = { renamingGroup = item },
                                 onDelete = { deletingGroup = item },
                             )
                         }
@@ -159,6 +161,16 @@ fun DayScreen(onAdd: () -> Unit, onBack: (() -> Unit)?, viewModel: DayViewModel 
             onSave = {
                 viewModel.saveAsMeal(it, rows)
                 savingMeal = null
+            },
+        )
+    }
+    renamingGroup?.let { group ->
+        RenameMealDialog(
+            currentName = group.name,
+            onDismiss = { renamingGroup = null },
+            onSave = {
+                viewModel.renameGroup(group.id, it)
+                renamingGroup = null
             },
         )
     }
@@ -243,6 +255,7 @@ private fun GroupRow(
     useOunces: Boolean,
     onToggle: () -> Unit,
     onEdit: (LogEntry) -> Unit,
+    onRename: () -> Unit,
     onDelete: () -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -271,7 +284,10 @@ private fun GroupRow(
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.SemiBold,
                 )
-                TextButton(onClick = onDelete) { Text("Delete meal") }
+                Row {
+                    TextButton(onClick = onRename) { Text("Rename meal") }
+                    TextButton(onClick = onDelete) { Text("Delete meal") }
+                }
             }
         }
     }
@@ -361,6 +377,18 @@ private fun EditEntryDialog(
                 TextButton(onClick = onDismiss) { Text("Cancel") }
             }
         },
+    )
+}
+
+@Composable
+private fun RenameMealDialog(currentName: String, onDismiss: () -> Unit, onSave: (String) -> Unit) {
+    var name by remember { mutableStateOf(currentName) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Rename meal") },
+        text = { OutlinedTextField(name, { name = it }, label = { Text("Meal name") }, singleLine = true) },
+        confirmButton = { TextButton(onClick = { onSave(name) }, enabled = name.isNotBlank()) { Text("Save") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )
 }
 

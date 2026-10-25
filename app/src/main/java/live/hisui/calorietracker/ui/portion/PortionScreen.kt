@@ -51,7 +51,7 @@ fun PortionScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(food?.name.orEmpty(), maxLines = 1) },
+                title = { Text("Food details") },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } },
                 actions = {
                     if (food != null) {
@@ -77,6 +77,7 @@ fun PortionScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            Text(food.name, style = MaterialTheme.typography.headlineSmall)
             food.brand?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
             Text(
                 state.nutrition?.kcal?.kcalText() ?: "-",

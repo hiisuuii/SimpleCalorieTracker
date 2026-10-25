@@ -72,6 +72,23 @@ class GroupLoggingTest {
     }
 
     @Test
+    fun renamingAGroupRenamesEveryFoodInItAndNothingElse() = runTest {
+        val chicken = food("Chicken", 165.0)
+        val bun = food("Bun", 250.0)
+        val today = log.currentLogDate.first()
+        log.logGroup("Sandwich", listOf(chicken to 100.0, bun to 50.0), Meal.LUNCH)
+        log.logGroup("Salad", listOf(chicken to 80.0), Meal.DINNER)
+        val sandwichId = log.entriesForDate(today).first().first { it.groupName == "Sandwich" }.groupId!!
+
+        log.renameGroup(sandwichId, "Chicken sandwich")
+
+        val byName = log.entriesForDate(today).first().groupBy { it.groupName }
+        assertEquals(2, byName.getValue("Chicken sandwich").size)
+        assertEquals(1, byName.getValue("Salad").size)
+        assertEquals(290.0 + 132.0, log.totalForDate(today).first(), 0.001)
+    }
+
+    @Test
     fun loggingASavedMealCreatesAGroupNamedAfterIt() = runTest {
         val chicken = food("Chicken", 165.0)
         val bun = food("Bun", 250.0)

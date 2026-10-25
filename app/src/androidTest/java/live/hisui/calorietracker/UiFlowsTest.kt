@@ -93,6 +93,13 @@ class UiFlowsTest {
         compose.onNodeWithText("Chicken sandwich").performClick()
         waitForText("Shredded chicken")
         compose.onNodeWithText("Hamburger bun").assertExists()
+
+        compose.onNodeWithText("Rename meal").performClick()
+        compose.onNodeWithText("Meal name").performTextReplacement("Lunch sandwich")
+        compose.onNodeWithText("Save").performClick()
+        waitForText("Lunch sandwich")
+        compose.onNodeWithText("Chicken sandwich").assertDoesNotExist()
+        compose.onNodeWithText("290 / 2000 kcal").assertExists()
     }
 
     @Test

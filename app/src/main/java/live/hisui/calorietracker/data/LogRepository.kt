@@ -71,6 +71,8 @@ class LogRepository @Inject constructor(
 
     suspend fun deleteGroup(groupId: String) = log.deleteGroup(groupId)
 
+    suspend fun renameGroup(groupId: String, name: String) = log.renameGroup(groupId, name)
+
     private suspend fun foodEntry(food: Food, grams: Double, meal: Meal, source: EntrySource, now: Instant): LogEntry {
         val n = Nutrition(food.kcalPer100g, food.proteinPer100g, food.carbsPer100g, food.fatPer100g).scaledTo(grams)
         return newEntry(now, meal, food.name, n.kcal, source).copy(

@@ -33,6 +33,9 @@ interface LogDao {
     @Query("DELETE FROM log_entry WHERE group_id = :groupId")
     suspend fun deleteGroup(groupId: String)
 
+    @Query("UPDATE log_entry SET group_name = :name WHERE group_id = :groupId")
+    suspend fun renameGroup(groupId: String, name: String)
+
     @Query("SELECT COALESCE(SUM(kcal), 0) FROM log_entry WHERE log_date = :date")
     fun totalForDate(date: String): Flow<Double>
 
