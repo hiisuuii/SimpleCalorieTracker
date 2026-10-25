@@ -3,6 +3,7 @@ package live.hisui.calorietracker
 import android.app.Application
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
+import androidx.work.ExistingWorkPolicy
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
@@ -25,6 +26,8 @@ class CalorieTrackerApp : Application(), Configuration.Provider {
     override fun onCreate() {
         super.onCreate()
         Notifications.createChannel(this)
-        CoroutineScope(SupervisorJob() + Dispatchers.Default).launch { scheduler.scheduleAll(settings.current()) }
+        CoroutineScope(SupervisorJob() + Dispatchers.Default).launch {
+            scheduler.scheduleAll(settings.current(), ExistingWorkPolicy.KEEP)
+        }
     }
 }

@@ -17,7 +17,8 @@ import live.hisui.calorietracker.domain.PortionOption
 import live.hisui.calorietracker.domain.RankInput
 import live.hisui.calorietracker.domain.Words
 
-data class PendingItem(val item: ParsedItem, val alias: Alias?)
+// aliasKey is taken from what the user typed, before any clarifying answer adds a state, so the same phrase hits next time.
+data class PendingItem(val item: ParsedItem, val alias: Alias?, val aliasKey: String)
 
 data class ResolvedItem(
     val pending: PendingItem,
@@ -37,8 +38,10 @@ class SentenceService @Inject constructor(
     private val foods: FoodRepository,
     private val log: LogRepository,
 ) {
-    suspend fun parse(text: String): List<PendingItem> =
-        parser.parse(text).map { PendingItem(it, aliases.byPhrase(it.phrase)) }
+    suspend fun parse(text: String): List<PendingItem> = parser.parse(text).map { item ->
+        val key = Words.tokens(item.phrase).joinToString(" ")
+        PendingItem(item, aliases.byPhrase(key), key)
+    }
 
     suspend fun resolve(pending: PendingItem): ResolvedItem {
         pending.alias?.let { alias ->
@@ -68,7 +71,7 @@ class SentenceService @Inject constructor(
         items.forEach { (resolved, grams) ->
             val food = resolved.food ?: return@forEach
             log.logFood(food, grams, meal, EntrySource.TEXT)
-            aliases.upsert(Alias(phrase = resolved.pending.item.phrase, foodId = food.id, defaultGrams = grams))
+            aliases.upsert(Alias(phrase = resolved.pending.aliasKey, foodId = food.id, defaultGrams = grams))
         }
     }
 
