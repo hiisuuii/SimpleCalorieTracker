@@ -15,6 +15,7 @@ import live.hisui.calorietracker.data.LogRepository
 import live.hisui.calorietracker.data.SettingsRepository
 import live.hisui.calorietracker.data.db.Food
 import live.hisui.calorietracker.data.db.Portion
+import live.hisui.calorietracker.domain.EntrySource
 import live.hisui.calorietracker.domain.GRAMS_PER_OUNCE
 import live.hisui.calorietracker.domain.Meal
 import live.hisui.calorietracker.domain.Nutrition
@@ -53,18 +54,23 @@ class PortionViewModel @Inject constructor(
     private val settings: SettingsRepository,
 ) : ViewModel() {
     private val foodId: Long = checkNotNull(handle["foodId"])
+    private val source = handle.get<String>("source")?.let { EntrySource.valueOf(it.uppercase()) } ?: EntrySource.MANUAL
     private val _state = MutableStateFlow(PortionUiState())
     val state: StateFlow<PortionUiState> = _state.asStateFlow()
 
     init {
         viewModelScope.launch {
             val ounces = settings.current().useOunces
+            val portions = foods.portions(foodId)
+            // Packaged products are usually eaten by the serving, so start there.
+            val serving = portions.firstOrNull { it.label.startsWith("1 serving") }.takeIf { source == EntrySource.BARCODE }
             _state.value = PortionUiState(
                 food = foods.get(foodId),
-                portions = foods.portions(foodId),
+                portions = portions,
+                selected = serving,
                 meal = log.mealNow(),
                 useOunces = ounces,
-                amount = defaultWeight(ounces),
+                amount = if (serving != null) "1" else defaultWeight(ounces),
             )
         }
     }
@@ -91,7 +97,7 @@ class PortionViewModel @Inject constructor(
         val food = s.food ?: return
         val grams = s.grams ?: return
         viewModelScope.launch {
-            log.logFood(food, grams, s.meal)
+            log.logFood(food, grams, s.meal, source)
             onDone()
         }
     }

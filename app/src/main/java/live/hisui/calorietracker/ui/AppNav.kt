@@ -22,6 +22,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import live.hisui.calorietracker.ui.add.AddScreen
+import live.hisui.calorietracker.ui.barcode.BarcodeScreen
 import live.hisui.calorietracker.ui.custom.CustomFoodScreen
 import live.hisui.calorietracker.ui.day.DayScreen
 import live.hisui.calorietracker.ui.history.HistoryScreen
@@ -38,10 +39,11 @@ private object Route {
     const val SETTINGS = "settings"
     const val ABOUT = "about"
     const val ADD = "add"
-    const val PORTION = "portion/{foodId}"
+    const val BARCODE = "barcode"
+    const val PORTION = "portion/{foodId}?source={source}"
     const val QUICK_ADD = "quickadd"
     const val SENTENCE = "sentence"
-    const val CUSTOM = "custom?foodId={foodId}"
+    const val CUSTOM = "custom?foodId={foodId}&barcode={barcode}"
 }
 
 private data class TopLevel(val route: String, val label: String, val icon: ImageVector)
@@ -104,13 +106,27 @@ fun AppNav() {
                     onQuickAdd = { nav.navigate(Route.QUICK_ADD) },
                     onCustomFood = { nav.navigate("custom") },
                     onSentence = { nav.navigate(Route.SENTENCE) },
+                    onScanBarcode = { nav.navigate(Route.BARCODE) },
                     onLogged = { backToDay() },
+                )
+            }
+            composable(Route.BARCODE) {
+                BarcodeScreen(
+                    onBack = { nav.popBackStack() },
+                    onFound = { id -> nav.navigate("portion/$id?source=barcode") { popUpTo(Route.ADD) } },
+                    onCreateFood = { code -> nav.navigate("custom?barcode=$code") { popUpTo(Route.ADD) } },
                 )
             }
             composable(Route.SENTENCE) {
                 SentenceScreen(onBack = { nav.popBackStack() }, onLogged = { backToDay() })
             }
-            composable(Route.PORTION, arguments = listOf(navArgument("foodId") { type = NavType.LongType })) {
+            composable(
+                Route.PORTION,
+                arguments = listOf(
+                    navArgument("foodId") { type = NavType.LongType },
+                    navArgument("source") { defaultValue = "manual" },
+                ),
+            ) {
                 PortionScreen(
                     onBack = { nav.popBackStack() },
                     onEdit = { nav.navigate("custom?foodId=$it") },
@@ -122,7 +138,10 @@ fun AppNav() {
             }
             composable(
                 Route.CUSTOM,
-                arguments = listOf(navArgument("foodId") { type = NavType.LongType; defaultValue = -1L }),
+                arguments = listOf(
+                    navArgument("foodId") { type = NavType.LongType; defaultValue = -1L },
+                    navArgument("barcode") { type = NavType.StringType; nullable = true },
+                ),
             ) {
                 CustomFoodScreen(
                     onBack = { nav.popBackStack() },

@@ -1,0 +1,10 @@
+{
+  "code": "5000000000031",
+  "status": 1,
+  "product": {
+    "product_name": "Mystery snack",
+    "nutriments": {
+      "proteins_100g": 5
+    }
+  }
+}

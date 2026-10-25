@@ -67,6 +67,7 @@ class CustomFoodViewModel @Inject constructor(
     private val foods: FoodRepository,
 ) : ViewModel() {
     private val foodId: Long = handle["foodId"] ?: -1L
+    private val barcode: String? = handle["barcode"]
     private val _state = MutableStateFlow(CustomFoodUiState())
     val state: StateFlow<CustomFoodUiState> = _state.asStateFlow()
 
@@ -97,7 +98,7 @@ class CustomFoodViewModel @Inject constructor(
             val grams = row.grams.toDoubleOrNull()?.takeIf { it > 0 }
             if (row.label.isBlank() || grams == null) null else Portion(foodId = 0, label = "1 ${row.label.trim()}", grams = grams)
         }
-        val food = (s.existing ?: Food(name = "", source = FoodSource.CUSTOM, kcalPer100g = 0.0)).copy(
+        val food = (s.existing ?: Food(name = "", source = FoodSource.CUSTOM, barcode = barcode, kcalPer100g = 0.0)).copy(
             name = s.name.trim(),
             brand = s.brand.trim().ifBlank { null },
             kcalPer100g = per100.kcal,

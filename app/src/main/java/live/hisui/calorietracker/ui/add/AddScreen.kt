@@ -44,6 +44,7 @@ fun AddScreen(
     onQuickAdd: () -> Unit,
     onCustomFood: () -> Unit,
     onSentence: () -> Unit,
+    onScanBarcode: () -> Unit,
     onLogged: () -> Unit,
     viewModel: AddViewModel = hiltViewModel(),
 ) {
@@ -73,7 +74,10 @@ fun AddScreen(
                 )
             }
             item {
-                Button(onClick = onSentence, modifier = Modifier.fillMaxWidth()) { Text("Describe a meal") }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = onSentence, modifier = Modifier.weight(1f)) { Text("Describe a meal") }
+                    Button(onClick = onScanBarcode, modifier = Modifier.weight(1f)) { Text("Scan barcode") }
+                }
             }
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

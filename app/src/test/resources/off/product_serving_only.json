@@ -1,0 +1,12 @@
+{
+  "code": "5000000000024",
+  "status": 1,
+  "product": {
+    "product_name": "Protein bar",
+    "brands": "Acme",
+    "serving_quantity": 50,
+    "nutriments": {
+      "energy-kcal_serving": 200
+    }
+  }
+}

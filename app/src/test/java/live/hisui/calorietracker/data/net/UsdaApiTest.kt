@@ -82,7 +82,7 @@ class UsdaApiTest {
 
         assertEquals("Cheddar cheese", cheese.food.name)
         assertEquals("Acme Dairy", cheese.food.brand)
-        assertEquals("012345678905", cheese.food.barcode)
+        assertEquals("0012345678905", cheese.food.barcode)
         assertEquals(listOf("1 serving (1 slice)" to 28.0), cheese.portions.map { it.label to it.grams })
     }
 

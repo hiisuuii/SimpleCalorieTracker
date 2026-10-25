@@ -61,8 +61,20 @@ class FoodRepository @Inject constructor(
         return candidate.food.copy(id = id)
     }
 
-    suspend fun materialize(candidate: FoodCandidate): Food =
-        if (candidate.food.id != 0L) candidate.food else saveUsdaCandidate(candidate)
+    suspend fun materialize(candidate: FoodCandidate): Food = when {
+        candidate.food.id != 0L -> candidate.food
+        candidate.food.source == FoodSource.OFF -> saveOffCandidate(candidate)
+        else -> saveUsdaCandidate(candidate)
+    }
+
+    suspend fun saveOffCandidate(candidate: FoodCandidate): Food {
+        val externalId = checkNotNull(candidate.food.externalId)
+        foods.byExternalId(FoodSource.OFF, externalId)?.let { return it }
+        val id = foods.insertWithPortions(candidate.food, candidate.portions)
+        return candidate.food.copy(id = id)
+    }
+
+    suspend fun findByBarcode(barcode: String): Food? = foods.byBarcode(barcode)
 
     suspend fun saveCustom(food: Food, portions: List<Portion>): Long {
         if (food.id == 0L) return foods.insertWithPortions(food, portions)
@@ -96,8 +108,8 @@ class FoodRepository @Inject constructor(
 }
 
 fun Throwable.toSearchMessage(): String = when {
-    this is IOException -> "No connection. Showing saved foods only."
+    this is IOException -> "No connection. Saved foods still work offline."
     this is HttpException && code() == 429 -> "USDA rate limit reached. Add your own API key in Settings."
     this is HttpException && (code() == 400 || code() == 403) -> "USDA rejected the API key. Check it in Settings."
-    else -> "USDA search failed. Showing saved foods only."
+    else -> "Online lookup failed. Saved foods still work offline."
 }

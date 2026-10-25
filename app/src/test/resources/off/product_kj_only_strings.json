@@ -1,0 +1,17 @@
+{
+  "code": "5000000000017",
+  "status": 1,
+  "product": {
+    "code": "5000000000017",
+    "product_name": "Oat crackers",
+    "brands": "",
+    "serving_size": "2 crackers (20g)",
+    "serving_quantity": "20",
+    "nutriments": {
+      "energy_100g": "1046",
+      "proteins_100g": "10",
+      "carbohydrates_100g": "30",
+      "fat_100g": "9.5"
+    }
+  }
+}

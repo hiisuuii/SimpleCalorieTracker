@@ -2,6 +2,7 @@ package live.hisui.calorietracker.data.net
 
 import live.hisui.calorietracker.data.db.Food
 import live.hisui.calorietracker.data.db.Portion
+import live.hisui.calorietracker.domain.BarcodeNormalizer
 import live.hisui.calorietracker.domain.FoodSource
 
 data class FoodCandidate(val food: Food, val portions: List<Portion>)
@@ -23,7 +24,7 @@ fun UsdaFood.toCandidate(): FoodCandidate? {
         source = FoodSource.USDA,
         externalId = fdcId.toString(),
         dataType = dataType,
-        barcode = gtinUpc?.takeIf { it.isNotBlank() },
+        barcode = gtinUpc?.let(BarcodeNormalizer::canonical),
         kcalPer100g = kcal,
         proteinPer100g = byId[PROTEIN],
         carbsPer100g = byId[CARBS],
