@@ -11,6 +11,7 @@ import javax.inject.Singleton
 import kotlinx.serialization.json.Json
 import live.hisui.calorietracker.BuildConfig
 import live.hisui.calorietracker.data.net.OffApi
+import live.hisui.calorietracker.data.net.RetryTransientInterceptor
 import live.hisui.calorietracker.data.net.UsdaApi
 import okhttp3.Cache
 import okhttp3.MediaType.Companion.toMediaType
@@ -44,6 +45,7 @@ object NetModule {
                     .build(),
             )
         }
+        .addInterceptor(RetryTransientInterceptor())
         // USDA sends no caching headers, so repeated searches would always hit the network.
         .addNetworkInterceptor { chain ->
             chain.proceed(chain.request()).newBuilder()

@@ -13,6 +13,7 @@ import dagger.hilt.components.SingletonComponent
 import java.time.Clock
 import javax.inject.Singleton
 import live.hisui.calorietracker.data.db.AppDatabase
+import live.hisui.calorietracker.data.db.MIGRATION_1_2
 
 private val Context.settingsStore: DataStore<Preferences> by preferencesDataStore("settings")
 
@@ -22,7 +23,9 @@ object DataModule {
     @Provides
     @Singleton
     fun database(@ApplicationContext context: Context): AppDatabase =
-        Room.databaseBuilder(context, AppDatabase::class.java, "calorie_tracker.db").build()
+        Room.databaseBuilder(context, AppDatabase::class.java, "calorie_tracker.db")
+            .addMigrations(MIGRATION_1_2)
+            .build()
 
     @Provides
     fun logDao(db: AppDatabase) = db.logDao()
