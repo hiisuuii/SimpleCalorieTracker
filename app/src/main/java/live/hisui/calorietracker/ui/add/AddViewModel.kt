@@ -21,6 +21,8 @@ import live.hisui.calorietracker.data.db.Food
 import live.hisui.calorietracker.data.db.LogEntry
 import live.hisui.calorietracker.data.db.SavedMeal
 import live.hisui.calorietracker.data.net.FoodCandidate
+import live.hisui.calorietracker.ui.build.DraftItem
+import live.hisui.calorietracker.ui.build.MealDraft
 
 data class AddUiState(
     val query: String = "",
@@ -38,6 +40,7 @@ class AddViewModel @Inject constructor(
     private val foods: FoodRepository,
     private val log: LogRepository,
     private val savedMeals: SavedMealRepository,
+    private val draft: MealDraft,
 ) : ViewModel() {
     private val _state = MutableStateFlow(AddUiState())
     val state: StateFlow<AddUiState> = _state.asStateFlow()
@@ -90,9 +93,9 @@ class AddViewModel @Inject constructor(
         }
     }
 
-    fun logSavedMeal(meal: SavedMeal, onDone: () -> Unit) {
+    fun logSavedMeal(meal: SavedMeal, eatenGrams: Double?, onDone: () -> Unit) {
         viewModelScope.launch {
-            savedMeals.log(meal, log.mealNow())
+            savedMeals.log(meal, log.mealNow(), eatenGrams)
             onDone()
         }
     }
@@ -101,7 +104,10 @@ class AddViewModel @Inject constructor(
         viewModelScope.launch { savedMeals.delete(meal.id) }
     }
 
-    fun renameSavedMeal(meal: SavedMeal, name: String) {
-        viewModelScope.launch { savedMeals.rename(meal.id, name.trim()) }
+    fun editSavedMeal(meal: SavedMeal, onLoaded: () -> Unit) {
+        viewModelScope.launch {
+            draft.load(meal.id, meal.name, meal.totalGrams, savedMeals.foodsOf(meal.id).map { (food, grams) -> DraftItem(food, grams) })
+            onLoaded()
+        }
     }
 }

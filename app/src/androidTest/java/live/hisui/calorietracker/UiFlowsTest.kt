@@ -195,7 +195,7 @@ class UiFlowsTest {
     }
 
     @Test
-    fun aSavedMealCanBeRenamed() {
+    fun aSavedMealCanBeEdited() {
         runBlocking {
             val bun = foodDao.insert(Food(name = "Bun", source = FoodSource.CUSTOM, kcalPer100g = 250.0))
             savedMealDao.create("Sandwich", listOf(SavedMealItem(savedMealId = 0, foodId = bun, grams = 50.0)))
@@ -203,9 +203,10 @@ class UiFlowsTest {
 
         compose.onNodeWithContentDescription("Log food").performClick()
         waitForText("Sandwich")
-        compose.onNodeWithContentDescription("Rename Sandwich").performClick()
+        compose.onNodeWithContentDescription("Edit Sandwich").performClick()
+        waitForText("Edit meal")
         compose.onNodeWithText("Meal name").performTextReplacement("Chicken sandwich")
-        compose.onNodeWithText("Save").performClick()
+        compose.onNodeWithText("Save changes").performClick()
 
         waitForText("Chicken sandwich")
         compose.onNodeWithText("Sandwich").assertDoesNotExist()

@@ -5,6 +5,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import live.hisui.calorietracker.data.db.AppDatabase
 import live.hisui.calorietracker.data.db.MIGRATION_1_2
 import live.hisui.calorietracker.data.db.MIGRATION_2_3
+import live.hisui.calorietracker.data.db.MIGRATION_3_4
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -45,7 +46,24 @@ class MigrationTest {
         }
     }
 
+    @Test
+    fun migrationFrom3KeepsSavedMealsWithoutATotalWeight() {
+        helper.createDatabase(DB_V3, 3).apply {
+            execSQL("INSERT INTO saved_meal (id, name) VALUES (1, 'Sandwich')")
+            close()
+        }
+
+        val db = helper.runMigrationsAndValidate(DB_V3, 4, true, MIGRATION_3_4)
+
+        db.query("SELECT name, total_grams FROM saved_meal").use { c ->
+            assertTrue(c.moveToFirst())
+            assertEquals("Sandwich", c.getString(0))
+            assertTrue(c.isNull(1))
+        }
+    }
+
     private companion object {
+        const val DB_V3 = "migration-test-v3"
         const val DB = "migration-test"
         const val DB_V2 = "migration-test-v2"
     }

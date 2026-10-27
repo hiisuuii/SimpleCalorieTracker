@@ -43,11 +43,11 @@ private object Route {
     const val ABOUT = "about"
     const val ADD = "add?pick={pick}"
     const val BUILD = "build"
-    const val BARCODE = "barcode"
-    const val LABEL = "label?barcode={barcode}"
+    const val BARCODE = "barcode?pick={pick}"
+    const val LABEL = "label?barcode={barcode}&pick={pick}"
     const val PORTION = "portion/{foodId}?source={source}&pick={pick}"
     const val QUICK_ADD = "quickadd"
-    const val CUSTOM = "custom?foodId={foodId}&barcode={barcode}"
+    const val CUSTOM = "custom?foodId={foodId}&barcode={barcode}&pick={pick}"
 }
 
 private data class TopLevel(val route: String, val label: String, val icon: ImageVector)
@@ -120,10 +120,11 @@ fun AppNav(requestedRoute: String?, onRouteHandled: () -> Unit, logTarget: LogTa
                     onBack = { nav.popBackStack() },
                     onFood = { nav.navigate("portion/$it?pick=$picking") },
                     onQuickAdd = { nav.navigate(Route.QUICK_ADD) },
-                    onCustomFood = { nav.navigate("custom") },
+                    onCustomFood = { nav.navigate("custom?pick=$picking") },
                     onBuildMeal = { nav.navigate(Route.BUILD) },
-                    onScanBarcode = { nav.navigate(Route.BARCODE) },
-                    onScanLabel = { nav.navigate("label") },
+                    onEditMeal = { nav.navigate(Route.BUILD) },
+                    onScanBarcode = { nav.navigate("barcode?pick=$picking") },
+                    onScanLabel = { nav.navigate("label?pick=$picking") },
                     onLogged = { backToDay() },
                     picking = picking,
                 )
@@ -135,21 +136,26 @@ fun AppNav(requestedRoute: String?, onRouteHandled: () -> Unit, logTarget: LogTa
                     onLogged = { backToDay() },
                 )
             }
-            composable(Route.BARCODE) {
+            composable(Route.BARCODE, arguments = listOf(navArgument("pick") { type = NavType.BoolType; defaultValue = false })) { entry ->
+                val picking = entry.arguments?.getBoolean("pick") ?: false
                 BarcodeScreen(
                     onBack = { nav.popBackStack() },
-                    onFound = { id -> nav.navigate("portion/$id?source=barcode") { popUpTo(Route.ADD) } },
-                    onCreateFood = { code -> nav.navigate("custom?barcode=$code") { popUpTo(Route.ADD) } },
-                    onScanLabel = { code -> nav.navigate("label?barcode=$code") { popUpTo(Route.ADD) } },
+                    onFound = { id -> nav.navigate("portion/$id?source=barcode&pick=$picking") { popUpTo(Route.ADD) } },
+                    onCreateFood = { code -> nav.navigate("custom?barcode=$code&pick=$picking") { popUpTo(Route.ADD) } },
+                    onScanLabel = { code -> nav.navigate("label?barcode=$code&pick=$picking") { popUpTo(Route.ADD) } },
                 )
             }
             composable(
                 Route.LABEL,
-                arguments = listOf(navArgument("barcode") { type = NavType.StringType; nullable = true }),
-            ) {
+                arguments = listOf(
+                    navArgument("barcode") { type = NavType.StringType; nullable = true },
+                    navArgument("pick") { type = NavType.BoolType; defaultValue = false },
+                ),
+            ) { entry ->
+                val picking = entry.arguments?.getBoolean("pick") ?: false
                 LabelScreen(
                     onBack = { nav.popBackStack() },
-                    onSaved = { id -> nav.navigate("portion/$id?source=label") { popUpTo(Route.ADD) } },
+                    onSaved = { id -> nav.navigate("portion/$id?source=label&pick=$picking") { popUpTo(Route.ADD) } },
                 )
             }
             composable(
@@ -163,7 +169,7 @@ fun AppNav(requestedRoute: String?, onRouteHandled: () -> Unit, logTarget: LogTa
                 val picking = entry.arguments?.getBoolean("pick") ?: false
                 PortionScreen(
                     onBack = { nav.popBackStack() },
-                    onEdit = { nav.navigate("custom?foodId=$it") },
+                    onEdit = { nav.navigate("custom?foodId=$it&pick=$picking") },
                     onLogged = { if (picking) nav.popBackStack(Route.BUILD, inclusive = false) else backToDay() },
                 )
             }
@@ -175,11 +181,13 @@ fun AppNav(requestedRoute: String?, onRouteHandled: () -> Unit, logTarget: LogTa
                 arguments = listOf(
                     navArgument("foodId") { type = NavType.LongType; defaultValue = -1L },
                     navArgument("barcode") { type = NavType.StringType; nullable = true },
+                    navArgument("pick") { type = NavType.BoolType; defaultValue = false },
                 ),
-            ) {
+            ) { entry ->
+                val picking = entry.arguments?.getBoolean("pick") ?: false
                 CustomFoodScreen(
                     onBack = { nav.popBackStack() },
-                    onSaved = { id -> nav.navigate("portion/$id") { popUpTo(Route.ADD) } },
+                    onSaved = { id -> nav.navigate("portion/$id?pick=$picking") { popUpTo(Route.ADD) } },
                     onDeleted = { nav.popBackStack(Route.ADD, inclusive = false) },
                 )
             }

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -35,9 +36,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlin.math.roundToInt
 import live.hisui.calorietracker.data.db.Food
 import live.hisui.calorietracker.data.db.LogEntry
 import live.hisui.calorietracker.data.db.SavedMeal
@@ -53,6 +56,7 @@ fun AddScreen(
     onQuickAdd: () -> Unit,
     onCustomFood: () -> Unit,
     onBuildMeal: () -> Unit,
+    onEditMeal: () -> Unit,
     onScanBarcode: () -> Unit,
     onScanLabel: () -> Unit,
     onLogged: () -> Unit,
@@ -61,7 +65,7 @@ fun AddScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val searching = state.query.isNotBlank()
-    var renaming by remember { mutableStateOf<SavedMeal?>(null) }
+    var portioning by remember { mutableStateOf<SavedMeal?>(null) }
     var deleting by remember { mutableStateOf<SavedMeal?>(null) }
 
     Scaffold(
@@ -86,7 +90,15 @@ fun AddScreen(
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
-            if (!picking) {
+            if (picking) {
+                item {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(onClick = onScanBarcode) { Text("Scan barcode") }
+                        OutlinedButton(onClick = onScanLabel) { Text("Scan label") }
+                        OutlinedButton(onClick = onCustomFood) { Text("Custom food") }
+                    }
+                }
+            } else {
                 item {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(onClick = onBuildMeal, modifier = Modifier.weight(1f)) { Text("Build a meal") }
@@ -104,7 +116,7 @@ fun AddScreen(
             if (searching) {
                 searchResults(state, viewModel, onFood)
             } else {
-                browse(state, viewModel, onFood, onLogged, onRename = { renaming = it }, onDelete = { deleting = it }, picking)
+                browse(state, viewModel, onFood, onLogged, onLogMeal = { portioning = it }, onEdit = onEditMeal, onDelete = { deleting = it }, picking)
             }
         }
     }
@@ -123,22 +135,31 @@ fun AddScreen(
             dismissButton = { TextButton(onClick = { deleting = null }) { Text("Cancel") } },
         )
     }
-    renaming?.let { meal ->
-        var name by remember(meal.id) { mutableStateOf(meal.name) }
+    portioning?.let { meal ->
+        var grams by remember(meal.id) { mutableStateOf(meal.totalGrams?.roundToInt()?.toString().orEmpty()) }
         AlertDialog(
-            onDismissRequest = { renaming = null },
-            title = { Text("Rename meal") },
-            text = { OutlinedTextField(name, { name = it }, label = { Text("Meal name") }, singleLine = true) },
+            onDismissRequest = { portioning = null },
+            title = { Text(meal.name) },
+            text = {
+                OutlinedTextField(
+                    value = grams,
+                    onValueChange = { grams = it },
+                    label = { Text("Grams you ate") },
+                    supportingText = { Text("The whole meal weighs ${meal.totalGrams?.roundToInt()} g.") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    singleLine = true,
+                )
+            },
             confirmButton = {
                 TextButton(
                     onClick = {
-                        viewModel.renameSavedMeal(meal, name)
-                        renaming = null
+                        viewModel.logSavedMeal(meal, grams.toDouble(), onLogged)
+                        portioning = null
                     },
-                    enabled = name.isNotBlank(),
-                ) { Text("Save") }
+                    enabled = grams.toDoubleOrNull()?.let { it > 0 } == true,
+                ) { Text("Log") }
             },
-            dismissButton = { TextButton(onClick = { renaming = null }) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = { portioning = null }) { Text("Cancel") } },
         )
     }
 }
@@ -168,7 +189,8 @@ private fun androidx.compose.foundation.lazy.LazyListScope.browse(
     viewModel: AddViewModel,
     onFood: (Long) -> Unit,
     onLogged: () -> Unit,
-    onRename: (SavedMeal) -> Unit,
+    onLogMeal: (SavedMeal) -> Unit,
+    onEdit: () -> Unit,
     onDelete: (SavedMeal) -> Unit,
     picking: Boolean,
 ) {
@@ -178,11 +200,11 @@ private fun androidx.compose.foundation.lazy.LazyListScope.browse(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { viewModel.logSavedMeal(meal, onLogged) },
+                    .clickable { if (meal.totalGrams != null) onLogMeal(meal) else viewModel.logSavedMeal(meal, null, onLogged) },
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Text(meal.name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f).padding(vertical = 12.dp))
-                IconButton(onClick = { onRename(meal) }) { Icon(Icons.Default.Edit, "Rename ${meal.name}") }
+                IconButton(onClick = { viewModel.editSavedMeal(meal, onEdit) }) { Icon(Icons.Default.Edit, "Edit ${meal.name}") }
                 IconButton(onClick = { onDelete(meal) }) { Icon(Icons.Default.Delete, "Delete ${meal.name}") }
             }
         }

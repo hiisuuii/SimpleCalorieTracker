@@ -13,7 +13,7 @@ import androidx.room.RoomDatabase
         SavedMeal::class,
         SavedMealItem::class,
     ],
-    version = 3,
+    version = 4,
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun logDao(): LogDao

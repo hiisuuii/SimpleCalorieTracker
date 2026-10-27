@@ -19,8 +19,25 @@ class MealDraft @Inject constructor() {
     private val _name = MutableStateFlow("")
     val name: StateFlow<String> = _name.asStateFlow()
 
+    private val _totalGrams = MutableStateFlow("")
+    val totalGrams: StateFlow<String> = _totalGrams.asStateFlow()
+
+    private val _editingId = MutableStateFlow<Long?>(null)
+    val editingId: StateFlow<Long?> = _editingId.asStateFlow()
+
     fun setName(value: String) {
         _name.value = value
+    }
+
+    fun setTotalGrams(value: String) {
+        _totalGrams.value = value
+    }
+
+    fun load(id: Long, name: String, totalGrams: Double?, items: List<DraftItem>) {
+        _editingId.value = id
+        _name.value = name
+        _totalGrams.value = totalGrams?.let { if (it % 1.0 == 0.0) it.toLong().toString() else it.toString() }.orEmpty()
+        _items.value = items
     }
 
     fun add(food: Food, grams: Double) = _items.update { it + DraftItem(food, grams) }
@@ -33,5 +50,7 @@ class MealDraft @Inject constructor() {
     fun clear() {
         _items.value = emptyList()
         _name.value = ""
+        _totalGrams.value = ""
+        _editingId.value = null
     }
 }

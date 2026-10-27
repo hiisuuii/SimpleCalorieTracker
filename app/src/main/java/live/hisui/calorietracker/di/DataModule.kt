@@ -15,6 +15,7 @@ import javax.inject.Singleton
 import live.hisui.calorietracker.data.db.AppDatabase
 import live.hisui.calorietracker.data.db.MIGRATION_1_2
 import live.hisui.calorietracker.data.db.MIGRATION_2_3
+import live.hisui.calorietracker.data.db.MIGRATION_3_4
 
 private val Context.settingsStore: DataStore<Preferences> by preferencesDataStore("settings")
 
@@ -25,7 +26,7 @@ object DataModule {
     @Singleton
     fun database(@ApplicationContext context: Context): AppDatabase =
         Room.databaseBuilder(context, AppDatabase::class.java, "calorie_tracker.db")
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
             .build()
 
     @Provides

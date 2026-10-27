@@ -132,6 +132,8 @@ fun LogEntry.withGrams(newGrams: Double): LogEntry {
 data class SavedMeal(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val name: String,
+    // Weight of the finished dish; lets a portion be logged by how much of it was eaten.
+    @ColumnInfo(name = "total_grams") val totalGrams: Double? = null,
 )
 
 @Serializable

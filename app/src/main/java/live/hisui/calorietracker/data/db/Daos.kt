@@ -176,8 +176,14 @@ interface SavedMealDao {
     @Query("DELETE FROM saved_meal WHERE id = :id")
     suspend fun delete(id: Long)
 
-    @Query("UPDATE saved_meal SET name = :name WHERE id = :id")
-    suspend fun rename(id: Long, name: String)
+    @Query("SELECT * FROM saved_meal WHERE id = :id")
+    suspend fun byId(id: Long): SavedMeal?
+
+    @Query("UPDATE saved_meal SET name = :name, total_grams = :totalGrams WHERE id = :id")
+    suspend fun updateDetails(id: Long, name: String, totalGrams: Double?)
+
+    @Query("DELETE FROM saved_meal_item WHERE saved_meal_id = :mealId")
+    suspend fun deleteItems(mealId: Long)
 
     @Query("SELECT * FROM saved_meal")
     suspend fun allMeals(): List<SavedMeal>
@@ -192,9 +198,16 @@ interface SavedMealDao {
     suspend fun deleteAll()
 
     @Transaction
-    suspend fun create(name: String, items: List<SavedMealItem>): Long {
-        val id = insert(SavedMeal(name = name))
+    suspend fun create(name: String, items: List<SavedMealItem>, totalGrams: Double? = null): Long {
+        val id = insert(SavedMeal(name = name, totalGrams = totalGrams))
         insertItems(items.map { it.copy(id = 0, savedMealId = id) })
         return id
+    }
+
+    @Transaction
+    suspend fun replace(id: Long, name: String, totalGrams: Double?, items: List<SavedMealItem>) {
+        updateDetails(id, name, totalGrams)
+        deleteItems(id)
+        insertItems(items.map { it.copy(id = 0, savedMealId = id) })
     }
 }

@@ -139,4 +139,33 @@ class GroupLoggingTest {
         assertEquals(2, entries.map { it.groupId }.toSet().size)
         assertEquals(580.0, log.totalForDate(today).first(), 0.001)
     }
+
+    @Test
+    fun loggingPartOfAMealWithATotalWeightScalesEveryFood() = runTest {
+        val chicken = food("Chicken", 165.0)
+        val bun = food("Bun", 250.0)
+        val today = log.currentLogDate.first()
+        savedMeals.create("Stew", listOf(chicken to 400.0, bun to 200.0), totalGrams = 1000.0)
+
+        savedMeals.log(savedMeals.meals.first().single(), Meal.DINNER, eatenGrams = 250.0)
+
+        val entries = log.entriesForDate(today).first()
+        assertEquals(listOf(100.0, 50.0), entries.map { it.grams })
+        assertEquals(290.0, log.totalForDate(today).first(), 0.001)
+    }
+
+    @Test
+    fun editingASavedMealReplacesItsFoodsNameAndTotalWeight() = runTest {
+        val chicken = food("Chicken", 165.0)
+        val bun = food("Bun", 250.0)
+        savedMeals.create("Sandwich", listOf(chicken to 100.0), totalGrams = null)
+        val id = savedMeals.meals.first().single().id
+
+        savedMeals.update(id, "Chicken sandwich", listOf(chicken to 120.0, bun to 50.0), totalGrams = 180.0)
+
+        val meal = savedMeals.get(id)!!
+        assertEquals("Chicken sandwich", meal.name)
+        assertEquals(180.0, meal.totalGrams!!, 0.001)
+        assertEquals(listOf(120.0, 50.0), savedMeals.foodsOf(id).map { it.second })
+    }
 }

@@ -18,9 +18,18 @@ class SavedMealRepository @Inject constructor(
 ) {
     val meals: Flow<List<SavedMeal>> = dao.meals()
 
-    suspend fun create(name: String, items: List<Pair<Food, Double>>) {
-        dao.create(name, items.map { (food, grams) -> SavedMealItem(savedMealId = 0, foodId = food.id, grams = grams) })
+    suspend fun create(name: String, items: List<Pair<Food, Double>>, totalGrams: Double? = null) {
+        dao.create(name, items.map { it.toItem() }, totalGrams)
     }
+
+    suspend fun update(id: Long, name: String, items: List<Pair<Food, Double>>, totalGrams: Double?) {
+        dao.replace(id, name, totalGrams, items.map { it.toItem() })
+    }
+
+    suspend fun get(id: Long): SavedMeal? = dao.byId(id)
+
+    suspend fun foodsOf(id: Long): List<Pair<Food, Double>> =
+        dao.items(id).mapNotNull { item -> foods.get(item.foodId)?.let { it to item.grams } }
 
     // Quick-add entries have no food to point at, so they cannot be part of a saved meal.
     suspend fun saveFromEntries(name: String, entries: List<LogEntry>): Boolean {
@@ -34,12 +43,14 @@ class SavedMealRepository @Inject constructor(
         return true
     }
 
-    suspend fun log(meal: SavedMeal, slot: Meal) {
-        val items = dao.items(meal.id).mapNotNull { item -> foods.get(item.foodId)?.let { it to item.grams } }
+    suspend fun log(meal: SavedMeal, slot: Meal, eatenGrams: Double? = null) {
+        val total = meal.totalGrams
+        val scale = if (eatenGrams != null && total != null) eatenGrams / total else 1.0
+        val items = foodsOf(meal.id).map { (food, grams) -> food to grams * scale }
         if (items.isNotEmpty()) log.logGroup(meal.name, items, slot)
     }
 
     suspend fun delete(id: Long) = dao.delete(id)
 
-    suspend fun rename(id: Long, name: String) = dao.rename(id, name)
+    private fun Pair<Food, Double>.toItem() = SavedMealItem(savedMealId = 0, foodId = first.id, grams = second)
 }

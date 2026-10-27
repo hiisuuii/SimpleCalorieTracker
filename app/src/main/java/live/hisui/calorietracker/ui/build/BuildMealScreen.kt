@@ -1,5 +1,6 @@
 package live.hisui.calorietracker.ui.build
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -52,13 +53,21 @@ fun BuildMealScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     var name by remember { mutableStateOf(state.name) }
+    var totalGrams by remember { mutableStateOf(state.totalGrams) }
+    val isEditing = state.editingId != null
+    // The draft outlives this screen, so leaving an edit must drop it or the next "Build a meal" reopens it.
+    val leave = {
+        if (isEditing) viewModel.startOver()
+        onBack()
+    }
+    BackHandler(enabled = isEditing, onBack = leave)
     var editing by remember { mutableStateOf<Int?>(null) }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Build a meal") },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } },
+                title = { Text(if (isEditing) "Edit meal" else "Build a meal") },
+                navigationIcon = { IconButton(onClick = leave) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } },
             )
         },
     ) { padding ->
@@ -109,22 +118,56 @@ fun BuildMealScreen(
                 )
             }
 
-            MealChips(state.slot, viewModel::setSlot)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(state.saveForReuse, viewModel::setSaveForReuse)
-                Text("Save to my meals so I can log it again in one tap")
-            }
-            Button(onClick = { viewModel.logMeal(onLogged) }, enabled = state.canLog, modifier = Modifier.fillMaxWidth()) {
-                Text(viewModel.logDate?.let { "Log meal to ${it.friendly()}" } ?: "Log meal")
+            OutlinedTextField(
+                value = totalGrams,
+                onValueChange = {
+                    totalGrams = it
+                    viewModel.setTotalGrams(it)
+                },
+                label = { Text("Weight of finished meal in grams (optional)") },
+                supportingText = { Text("Lets you log just the part you ate, by weight.") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+
+            if (isEditing) {
+                Button(onClick = { viewModel.logMeal(onBack) }, enabled = state.canLog, modifier = Modifier.fillMaxWidth()) {
+                    Text("Save changes")
+                }
+            } else {
+                if (state.totalWeight != null) {
+                    OutlinedTextField(
+                        value = state.eatenGrams,
+                        onValueChange = viewModel::setEatenGrams,
+                        label = { Text("Weight you are logging in grams") },
+                        supportingText = { Text("Leave blank to log the whole meal.") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    if (state.eatenWeight != null && state.items.isNotEmpty()) {
+                        Text("Logging ${(state.total.kcal * state.logScale).kcalText()}", style = MaterialTheme.typography.titleMedium)
+                    }
+                }
+                MealChips(state.slot, viewModel::setSlot)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(state.saveForReuse, viewModel::setSaveForReuse)
+                    Text("Save to my meals so I can log it again in one tap")
+                }
+                Button(onClick = { viewModel.logMeal(onLogged) }, enabled = state.canLog, modifier = Modifier.fillMaxWidth()) {
+                    Text(viewModel.logDate?.let { "Log meal to ${it.friendly()}" } ?: "Log meal")
+                }
             }
             if (state.items.isNotEmpty() || name.isNotBlank()) {
                 TextButton(
                     onClick = {
                         name = ""
+                        totalGrams = ""
                         viewModel.startOver()
                     },
                     modifier = Modifier.fillMaxWidth(),
-                ) { Text("Start over") }
+                ) { Text(if (isEditing) "Discard changes" else "Start over") }
             }
         }
     }
