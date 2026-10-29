@@ -21,19 +21,24 @@ data class BuildMealUiState(
     val items: List<DraftItem> = emptyList(),
     val slot: Meal = Meal.SNACK,
     val saveForReuse: Boolean = true,
-    val totalGrams: String = "",
-    val eatenGrams: String = "",
+    val totalAmount: String = "",
+    val byServings: Boolean = false,
+    val eatenAmount: String = "",
     val editingId: Long? = null,
 ) {
-    val totalWeight: Double? get() = totalGrams.toDoubleOrNull()?.takeIf { it > 0 }
+    val totalSize: Double? get() = totalAmount.toDoubleOrNull()?.takeIf { it > 0 }
 
-    val eatenWeight: Double? get() = eatenGrams.toDoubleOrNull()?.takeIf { it > 0 }
+    val eatenSize: Double? get() = eatenAmount.toDoubleOrNull()?.takeIf { it > 0 }
+
+    val totalGrams: Double? get() = totalSize.takeIf { !byServings }
+
+    val totalServings: Double? get() = totalSize.takeIf { byServings }
 
     // Ingredient amounts are for the whole dish; logging part of it scales them by eaten / total.
     val logScale: Double
         get() {
-            val total = totalWeight
-            val eaten = eatenWeight
+            val total = totalSize
+            val eaten = eatenSize
             return if (total != null && eaten != null) eaten / total else 1.0
         }
 
@@ -48,8 +53,8 @@ data class BuildMealUiState(
             )
         }
 
-    val canLog: Boolean get() = name.isNotBlank() && items.isNotEmpty() && (totalGrams.isBlank() || totalWeight != null) &&
-            (eatenGrams.isBlank() || eatenWeight != null)
+    val canLog: Boolean get() = name.isNotBlank() && items.isNotEmpty() && (totalAmount.isBlank() || totalSize != null) &&
+            (eatenAmount.isBlank() || eatenSize != null)
 }
 
 @HiltViewModel
@@ -61,14 +66,16 @@ class BuildMealViewModel @Inject constructor(
     val logDate get() = log.logTargetDate
     private val slot = MutableStateFlow(Meal.SNACK)
     private val saveForReuse = MutableStateFlow(true)
-    private val eatenGrams = MutableStateFlow("")
+    private val eatenAmount = MutableStateFlow("")
 
     val state: StateFlow<BuildMealUiState> = combine(
         combine(draft.name, draft.items, slot, saveForReuse) { name, items, slot, save -> BuildMealUiState(name, items, slot, save) },
-        draft.totalGrams,
-        eatenGrams,
+        combine(draft.totalAmount, draft.byServings, ::Pair),
+        eatenAmount,
         draft.editingId,
-    ) { base, total, eaten, editingId -> base.copy(totalGrams = total, eatenGrams = eaten, editingId = editingId) }
+    ) { base, (total, byServings), eaten, editingId ->
+        base.copy(totalAmount = total, byServings = byServings, eatenAmount = eaten, editingId = editingId)
+    }
         .stateIn(viewModelScope, SharingStarted.Eagerly, BuildMealUiState())
 
     init {
@@ -77,9 +84,14 @@ class BuildMealViewModel @Inject constructor(
 
     fun setName(value: String) = draft.setName(value)
 
-    fun setTotalGrams(value: String) = draft.setTotalGrams(value)
+    fun setTotalAmount(value: String) = draft.setTotalAmount(value)
 
-    fun setEatenGrams(value: String) = eatenGrams.update { value }
+    fun setByServings(value: Boolean) {
+        draft.setByServings(value)
+        eatenAmount.value = ""
+    }
+
+    fun setEatenAmount(value: String) = eatenAmount.update { value }
 
     fun setSlot(value: Meal) = slot.update { value }
 
@@ -90,7 +102,7 @@ class BuildMealViewModel @Inject constructor(
     fun remove(index: Int) = draft.remove(index)
 
     fun startOver() {
-        eatenGrams.value = ""
+        eatenAmount.value = ""
         draft.clear()
     }
 
@@ -102,10 +114,10 @@ class BuildMealViewModel @Inject constructor(
             val name = s.name.trim()
             val editingId = s.editingId
             if (editingId != null) {
-                savedMeals.update(editingId, name, items, s.totalWeight)
+                savedMeals.update(editingId, name, items, s.totalGrams, s.totalServings)
             } else {
                 log.logGroup(name, items.map { (food, grams) -> food to grams * s.logScale }, s.slot)
-                if (s.saveForReuse) savedMeals.create(name, items, s.totalWeight)
+                if (s.saveForReuse) savedMeals.create(name, items, s.totalGrams, s.totalServings)
             }
             startOver()
             onDone()

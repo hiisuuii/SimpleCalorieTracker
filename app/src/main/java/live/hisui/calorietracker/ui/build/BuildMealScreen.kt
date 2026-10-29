@@ -17,6 +17,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -53,7 +54,7 @@ fun BuildMealScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     var name by remember { mutableStateOf(state.name) }
-    var totalGrams by remember { mutableStateOf(state.totalGrams) }
+    var totalAmount by remember { mutableStateOf(state.totalAmount) }
     val isEditing = state.editingId != null
     // The draft outlives this screen, so leaving an edit must drop it or the next "Build a meal" reopens it.
     val leave = {
@@ -118,14 +119,18 @@ fun BuildMealScreen(
                 )
             }
 
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(selected = !state.byServings, onClick = { viewModel.setByServings(false) }, label = { Text("Total grams") })
+                FilterChip(selected = state.byServings, onClick = { viewModel.setByServings(true) }, label = { Text("Total servings") })
+            }
             OutlinedTextField(
-                value = totalGrams,
+                value = totalAmount,
                 onValueChange = {
-                    totalGrams = it
-                    viewModel.setTotalGrams(it)
+                    totalAmount = it
+                    viewModel.setTotalAmount(it)
                 },
-                label = { Text("Weight of finished meal in grams (optional)") },
-                supportingText = { Text("Lets you log just the part you ate, by weight.") },
+                label = { Text(if (state.byServings) "Servings in finished meal (optional)" else "Weight of finished meal in grams (optional)") },
+                supportingText = { Text(if (state.byServings) "Lets you log just the servings you ate." else "Lets you log just the part you ate, by weight.") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
@@ -136,17 +141,17 @@ fun BuildMealScreen(
                     Text("Save changes")
                 }
             } else {
-                if (state.totalWeight != null) {
+                if (state.totalSize != null) {
                     OutlinedTextField(
-                        value = state.eatenGrams,
-                        onValueChange = viewModel::setEatenGrams,
-                        label = { Text("Weight you are logging in grams") },
+                        value = state.eatenAmount,
+                        onValueChange = viewModel::setEatenAmount,
+                        label = { Text(if (state.byServings) "Servings you are logging" else "Weight you are logging in grams") },
                         supportingText = { Text("Leave blank to log the whole meal.") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
-                    if (state.eatenWeight != null && state.items.isNotEmpty()) {
+                    if (state.eatenSize != null && state.items.isNotEmpty()) {
                         Text("Logging ${(state.total.kcal * state.logScale).kcalText()}", style = MaterialTheme.typography.titleMedium)
                     }
                 }
@@ -163,7 +168,7 @@ fun BuildMealScreen(
                 TextButton(
                     onClick = {
                         name = ""
-                        totalGrams = ""
+                        totalAmount = ""
                         viewModel.startOver()
                     },
                     modifier = Modifier.fillMaxWidth(),

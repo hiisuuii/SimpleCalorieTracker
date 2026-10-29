@@ -19,13 +19,13 @@ class SavedMealRepository @Inject constructor(
 ) {
     val meals: Flow<List<SavedMeal>> = dao.meals()
 
-    suspend fun create(name: String, items: List<Pair<Food, Double>>, totalGrams: Double? = null) {
-        dao.create(name, items.map { it.toItem() }, totalGrams)
+    suspend fun create(name: String, items: List<Pair<Food, Double>>, totalGrams: Double? = null, totalServings: Double? = null) {
+        dao.create(name, items.map { it.toItem() }, totalGrams, totalServings)
         Timber.i("Saved meal '%s' with %d items", name, items.size)
     }
 
-    suspend fun update(id: Long, name: String, items: List<Pair<Food, Double>>, totalGrams: Double?) {
-        dao.replace(id, name, totalGrams, items.map { it.toItem() })
+    suspend fun update(id: Long, name: String, items: List<Pair<Food, Double>>, totalGrams: Double?, totalServings: Double?) {
+        dao.replace(id, name, totalGrams, totalServings, items.map { it.toItem() })
         Timber.i("Updated saved meal %d '%s'", id, name)
     }
 
@@ -46,9 +46,10 @@ class SavedMealRepository @Inject constructor(
         return true
     }
 
-    suspend fun log(meal: SavedMeal, slot: Meal, eatenGrams: Double? = null) {
-        val total = meal.totalGrams
-        val scale = if (eatenGrams != null && total != null) eatenGrams / total else 1.0
+    // eaten is in grams for a meal with a total weight and in servings for one with a total serving count.
+    suspend fun log(meal: SavedMeal, slot: Meal, eaten: Double? = null) {
+        val total = meal.totalGrams ?: meal.totalServings
+        val scale = if (eaten != null && total != null) eaten / total else 1.0
         val items = foodsOf(meal.id).map { (food, grams) -> food to grams * scale }
         if (items.isNotEmpty()) log.logGroup(meal.name, items, slot)
     }

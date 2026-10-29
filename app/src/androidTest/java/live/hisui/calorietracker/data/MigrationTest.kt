@@ -6,6 +6,7 @@ import live.hisui.calorietracker.data.db.AppDatabase
 import live.hisui.calorietracker.data.db.MIGRATION_1_2
 import live.hisui.calorietracker.data.db.MIGRATION_2_3
 import live.hisui.calorietracker.data.db.MIGRATION_3_4
+import live.hisui.calorietracker.data.db.MIGRATION_4_5
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -62,7 +63,24 @@ class MigrationTest {
         }
     }
 
+    @Test
+    fun migrationFrom4KeepsSavedMealsWithoutAServingCount() {
+        helper.createDatabase(DB_V4, 4).apply {
+            execSQL("INSERT INTO saved_meal (id, name, total_grams) VALUES (1, 'Stew', 900)")
+            close()
+        }
+
+        val db = helper.runMigrationsAndValidate(DB_V4, 5, true, MIGRATION_4_5)
+
+        db.query("SELECT total_grams, total_servings FROM saved_meal").use { c ->
+            assertTrue(c.moveToFirst())
+            assertEquals(900.0, c.getDouble(0), 0.0)
+            assertTrue(c.isNull(1))
+        }
+    }
+
     private companion object {
+        const val DB_V4 = "migration-test-v4"
         const val DB_V3 = "migration-test-v3"
         const val DB = "migration-test"
         const val DB_V2 = "migration-test-v2"

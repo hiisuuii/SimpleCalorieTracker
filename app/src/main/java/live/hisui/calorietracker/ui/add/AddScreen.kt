@@ -137,19 +137,25 @@ fun AddScreen(
         )
     }
     portioning?.let { meal ->
-        var grams by remember(meal.id) { mutableStateOf(meal.totalGrams?.roundToInt()?.toString().orEmpty()) }
+        val sized = meal.totalGrams != null || meal.totalServings != null
+        var eaten by remember(meal.id) { mutableStateOf(meal.totalGrams?.roundToInt()?.toString() ?: meal.totalServings?.let(::trimmed).orEmpty()) }
         var slot by remember(meal.id) { mutableStateOf(state.currentMeal) }
         AlertDialog(
             onDismissRequest = { portioning = null },
             title = { Text(meal.name) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    if (meal.totalGrams != null) {
+                    if (sized) {
                         OutlinedTextField(
-                            value = grams,
-                            onValueChange = { grams = it },
-                            label = { Text("Grams you ate") },
-                            supportingText = { Text("The whole meal weighs ${meal.totalGrams?.roundToInt()} g.") },
+                            value = eaten,
+                            onValueChange = { eaten = it },
+                            label = { Text(if (meal.totalServings != null) "Servings you ate" else "Grams you ate") },
+                            supportingText = {
+                                Text(
+                                    if (meal.totalServings != null) "The whole meal makes ${trimmed(meal.totalServings)} servings."
+                                    else "The whole meal weighs ${meal.totalGrams?.roundToInt()} g.",
+                                )
+                            },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                             singleLine = true,
                         )
@@ -160,10 +166,10 @@ fun AddScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        viewModel.logSavedMeal(meal, slot, grams.toDoubleOrNull().takeIf { meal.totalGrams != null }, onLogged)
+                        viewModel.logSavedMeal(meal, slot, eaten.toDoubleOrNull().takeIf { sized }, onLogged)
                         portioning = null
                     },
-                    enabled = meal.totalGrams == null || grams.toDoubleOrNull()?.let { it > 0 } == true,
+                    enabled = !sized || eaten.toDoubleOrNull()?.let { it > 0 } == true,
                 ) { Text("Log") }
             },
             dismissButton = { TextButton(onClick = { portioning = null }) { Text("Cancel") } },
@@ -268,3 +274,5 @@ private fun RecentRow(entry: LogEntry, onOpen: () -> Unit, onRelog: (() -> Unit)
         if (onRelog != null) IconButton(onClick = onRelog) { Icon(Icons.Default.Add, "Log again") }
     }
 }
+
+private fun trimmed(value: Double) = if (value % 1.0 == 0.0) value.toLong().toString() else value.toString()

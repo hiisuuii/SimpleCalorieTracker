@@ -106,9 +106,9 @@ class AddViewModel @Inject constructor(
         }
     }
 
-    fun logSavedMeal(meal: SavedMeal, slot: Meal, eatenGrams: Double?, onDone: () -> Unit) {
+    fun logSavedMeal(meal: SavedMeal, slot: Meal, eaten: Double?, onDone: () -> Unit) {
         viewModelScope.launch {
-            savedMeals.log(meal, slot, eatenGrams)
+            savedMeals.log(meal, slot, eaten)
             onDone()
         }
     }
@@ -119,7 +119,7 @@ class AddViewModel @Inject constructor(
 
     fun editSavedMeal(meal: SavedMeal, onLoaded: () -> Unit) {
         viewModelScope.launch {
-            draft.load(meal.id, meal.name, meal.totalGrams, savedMeals.foodsOf(meal.id).map { (food, grams) -> DraftItem(food, grams) })
+            draft.load(meal.id, meal.name, meal.totalGrams, meal.totalServings, savedMeals.foodsOf(meal.id).map { (food, grams) -> DraftItem(food, grams) })
             onLoaded()
         }
     }
