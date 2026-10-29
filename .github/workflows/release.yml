@@ -25,7 +25,7 @@ jobs:
           RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
           RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
           RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
-        run: ./gradlew testDebugUnitTest assembleRelease -PversionName="${GITHUB_REF_NAME#v}" -PversionCode="${{ github.run_number }}"
+        run: ./gradlew testDebugUnitTest assembleRelease -PversionName="${GITHUB_REF_NAME#v}" -PversionCode="$((100 + ${{ github.run_number }}))"
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
