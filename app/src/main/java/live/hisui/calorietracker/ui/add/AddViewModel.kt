@@ -82,8 +82,18 @@ class AddViewModel @Inject constructor(
         }
     }
 
+    private var opening = false
+
     fun open(candidate: FoodCandidate, onSaved: (Long) -> Unit) {
-        viewModelScope.launch { onSaved(foods.saveUsdaCandidate(candidate).id) }
+        if (opening) return
+        opening = true
+        viewModelScope.launch {
+            try {
+                onSaved(foods.saveUsdaCandidate(candidate).id)
+            } finally {
+                opening = false
+            }
+        }
     }
 
     fun relog(entry: LogEntry, onDone: () -> Unit) {

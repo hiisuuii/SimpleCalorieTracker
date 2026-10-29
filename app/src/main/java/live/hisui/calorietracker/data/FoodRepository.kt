@@ -5,6 +5,8 @@ import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.SerializationException
 import live.hisui.calorietracker.data.db.Food
 import live.hisui.calorietracker.data.db.FoodDao
@@ -26,6 +28,9 @@ class FoodRepository @Inject constructor(
     val recents: Flow<List<Food>> = foods.recents()
     val favorites: Flow<List<Food>> = foods.favorites()
     val customFoods: Flow<List<Food>> = foods.customFoods()
+
+    // The check-then-insert below spans a network call; without this a double tap inserts the same external id twice.
+    private val saveLock = Mutex()
 
     suspend fun get(id: Long): Food? = foods.byId(id)
 
@@ -54,12 +59,12 @@ class FoodRepository @Inject constructor(
             Result.failure(e)
         }
 
-    suspend fun saveUsdaCandidate(candidate: FoodCandidate): Food {
+    suspend fun saveUsdaCandidate(candidate: FoodCandidate): Food = saveLock.withLock {
         val externalId = checkNotNull(candidate.food.externalId)
-        foods.byExternalId(FoodSource.USDA, externalId)?.let { return it }
+        foods.byExternalId(FoodSource.USDA, externalId)?.let { return@withLock it }
         val portions = if (candidate.food.dataType == BRANDED) candidate.portions else fetchPortions(externalId, candidate.portions)
         val id = foods.insertWithPortions(candidate.food, portions)
-        return candidate.food.copy(id = id)
+        candidate.food.copy(id = id)
     }
 
     suspend fun materialize(candidate: FoodCandidate): Food = when {
@@ -68,11 +73,11 @@ class FoodRepository @Inject constructor(
         else -> saveUsdaCandidate(candidate)
     }
 
-    suspend fun saveOffCandidate(candidate: FoodCandidate): Food {
+    suspend fun saveOffCandidate(candidate: FoodCandidate): Food = saveLock.withLock {
         val externalId = checkNotNull(candidate.food.externalId)
-        foods.byExternalId(FoodSource.OFF, externalId)?.let { return it }
+        foods.byExternalId(FoodSource.OFF, externalId)?.let { return@withLock it }
         val id = foods.insertWithPortions(candidate.food, candidate.portions)
-        return candidate.food.copy(id = id)
+        candidate.food.copy(id = id)
     }
 
     suspend fun findByBarcode(barcode: String): Food? = foods.byBarcode(barcode)
