@@ -9,6 +9,7 @@ import live.hisui.calorietracker.data.db.SavedMeal
 import live.hisui.calorietracker.data.db.SavedMealDao
 import live.hisui.calorietracker.data.db.SavedMealItem
 import live.hisui.calorietracker.domain.Meal
+import timber.log.Timber
 
 @Singleton
 class SavedMealRepository @Inject constructor(
@@ -20,10 +21,12 @@ class SavedMealRepository @Inject constructor(
 
     suspend fun create(name: String, items: List<Pair<Food, Double>>, totalGrams: Double? = null) {
         dao.create(name, items.map { it.toItem() }, totalGrams)
+        Timber.i("Saved meal '%s' with %d items", name, items.size)
     }
 
     suspend fun update(id: Long, name: String, items: List<Pair<Food, Double>>, totalGrams: Double?) {
         dao.replace(id, name, totalGrams, items.map { it.toItem() })
+        Timber.i("Updated saved meal %d '%s'", id, name)
     }
 
     suspend fun get(id: Long): SavedMeal? = dao.byId(id)
@@ -50,7 +53,10 @@ class SavedMealRepository @Inject constructor(
         if (items.isNotEmpty()) log.logGroup(meal.name, items, slot)
     }
 
-    suspend fun delete(id: Long) = dao.delete(id)
+    suspend fun delete(id: Long) {
+        dao.delete(id)
+        Timber.i("Deleted saved meal %d", id)
+    }
 
     private fun Pair<Food, Double>.toItem() = SavedMealItem(savedMealId = 0, foodId = first.id, grams = second)
 }

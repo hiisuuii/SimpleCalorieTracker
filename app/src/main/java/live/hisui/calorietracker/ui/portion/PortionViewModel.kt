@@ -20,6 +20,7 @@ import live.hisui.calorietracker.domain.GRAMS_PER_OUNCE
 import live.hisui.calorietracker.domain.Meal
 import live.hisui.calorietracker.domain.Nutrition
 import live.hisui.calorietracker.ui.build.MealDraft
+import timber.log.Timber
 
 data class PortionUiState(
     val food: Food? = null,
@@ -102,6 +103,7 @@ class PortionViewModel @Inject constructor(
         val food = s.food ?: return
         val grams = s.grams ?: return
         if (picking) {
+            Timber.i("Added food %d (%s) %.1f g to the meal being built", food.id, food.name, grams)
             draft.add(food, grams)
             onDone()
             return

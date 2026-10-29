@@ -35,6 +35,7 @@ class SettingsRepository @Inject constructor(
     private val reminders = stringPreferencesKey("reminders")
     private val middayFraction = doublePreferencesKey("midday_fraction")
     private val notifyOver = booleanPreferencesKey("notify_over")
+    private val debugLogging = booleanPreferencesKey("debug_logging")
     private val reminderSerializer = ListSerializer(Reminder.serializer())
 
     private val collapsed = stringSetPreferencesKey("collapsed_meals")
@@ -60,6 +61,7 @@ class SettingsRepository @Inject constructor(
             reminders = p[reminders]?.let { json.decodeFromString(reminderSerializer, it) } ?: d.reminders,
             middayFraction = p[middayFraction] ?: d.middayFraction,
             notifyWhenOver = p[notifyOver] ?: d.notifyWhenOver,
+            debugLogging = p[debugLogging] ?: d.debugLogging,
         )
     }
 
@@ -77,6 +79,7 @@ class SettingsRepository @Inject constructor(
             p[reminders] = json.encodeToString(reminderSerializer, settings.reminders)
             p[middayFraction] = settings.middayFraction
             p[notifyOver] = settings.notifyWhenOver
+            p[debugLogging] = settings.debugLogging
         }
     }
 }

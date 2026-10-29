@@ -121,6 +121,7 @@ fun SettingsScreen(onAbout: () -> Unit, viewModel: SettingsViewModel = hiltViewM
             )
 
             DataSection(viewModel)
+            if (viewModel.loggingAvailable) DebugSection(settings.debugLogging, viewModel)
             TextButton(onClick = onAbout) { Text("About") }
         }
 

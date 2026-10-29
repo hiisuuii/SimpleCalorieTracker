@@ -10,6 +10,7 @@ import java.io.File
 import javax.inject.Singleton
 import kotlinx.serialization.json.Json
 import live.hisui.calorietracker.BuildConfig
+import live.hisui.calorietracker.data.net.LoggingInterceptor
 import live.hisui.calorietracker.data.net.OffApi
 import live.hisui.calorietracker.data.net.RetryTransientInterceptor
 import live.hisui.calorietracker.data.net.UsdaApi
@@ -46,6 +47,7 @@ object NetModule {
             )
         }
         .addInterceptor(RetryTransientInterceptor())
+        .addInterceptor(LoggingInterceptor())
         // USDA sends no caching headers, so repeated searches would always hit the network.
         .addNetworkInterceptor { chain ->
             chain.proceed(chain.request()).newBuilder()

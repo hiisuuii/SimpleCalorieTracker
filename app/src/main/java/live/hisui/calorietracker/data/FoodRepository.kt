@@ -18,6 +18,7 @@ import live.hisui.calorietracker.data.net.toPortions
 import live.hisui.calorietracker.domain.FoodSource
 import live.hisui.calorietracker.domain.FtsQuery
 import retrofit2.HttpException
+import timber.log.Timber
 
 @Singleton
 class FoodRepository @Inject constructor(
@@ -62,6 +63,7 @@ class FoodRepository @Inject constructor(
     suspend fun saveUsdaCandidate(candidate: FoodCandidate): Food = saveLock.withLock {
         val externalId = checkNotNull(candidate.food.externalId)
         foods.byExternalId(FoodSource.USDA, externalId)?.let { return@withLock it }
+        Timber.i("Saving USDA food %s (%s)", externalId, candidate.food.name)
         val portions = if (candidate.food.dataType == BRANDED) candidate.portions else fetchPortions(externalId, candidate.portions)
         val id = foods.insertWithPortions(candidate.food, portions)
         candidate.food.copy(id = id)
@@ -97,10 +99,13 @@ class FoodRepository @Inject constructor(
         try {
             usda.details(externalId.toLong(), apiKey()).toPortions()
         } catch (e: IOException) {
+            Timber.w(e, "Portion fetch failed for %s", externalId)
             fallback
         } catch (e: HttpException) {
+            Timber.w(e, "Portion fetch failed for %s", externalId)
             fallback
         } catch (e: SerializationException) {
+            Timber.w(e, "Portion fetch failed for %s", externalId)
             fallback
         }
 

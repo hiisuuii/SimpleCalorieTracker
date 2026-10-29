@@ -21,6 +21,7 @@ import live.hisui.calorietracker.data.BackupFormatException
 import live.hisui.calorietracker.data.BackupRepository
 import live.hisui.calorietracker.data.SettingsRepository
 import live.hisui.calorietracker.domain.Settings
+import live.hisui.calorietracker.platform.AppLogger
 import live.hisui.calorietracker.platform.ReminderScheduler
 
 @HiltViewModel
@@ -29,6 +30,7 @@ class SettingsViewModel @Inject constructor(
     private val repo: SettingsRepository,
     private val scheduler: ReminderScheduler,
     private val backup: BackupRepository,
+    private val logger: AppLogger,
 ) : ViewModel() {
     val settings: StateFlow<Settings?> = repo.settings
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
@@ -43,6 +45,10 @@ class SettingsViewModel @Inject constructor(
             scheduler.scheduleAll(updated)
         }
     }
+
+    val loggingAvailable get() = logger.available
+
+    suspend fun logFiles(): List<Uri> = withContext(Dispatchers.IO) { logger.logFiles() }
 
     fun removeReminder(id: Long) {
         update { copy(reminders = reminders.filter { it.id != id }) }

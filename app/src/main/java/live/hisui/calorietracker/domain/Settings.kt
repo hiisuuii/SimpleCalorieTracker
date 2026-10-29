@@ -13,4 +13,5 @@ data class Settings(
     val reminders: List<Reminder> = Reminder.defaults,
     val middayFraction: Double = 0.3,
     val notifyWhenOver: Boolean = false,
+    val debugLogging: Boolean = false,
 )

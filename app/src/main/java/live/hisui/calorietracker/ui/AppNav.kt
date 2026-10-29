@@ -34,6 +34,7 @@ import live.hisui.calorietracker.ui.portion.PortionScreen
 import live.hisui.calorietracker.ui.quickadd.QuickAddScreen
 import live.hisui.calorietracker.ui.settings.AboutScreen
 import live.hisui.calorietracker.ui.settings.SettingsScreen
+import timber.log.Timber
 
 private object Route {
     const val DAY = "day"
@@ -63,6 +64,7 @@ fun AppNav(requestedRoute: String?, onRouteHandled: () -> Unit, logTarget: LogTa
     val nav = rememberNavController()
     val current by nav.currentBackStackEntryAsState()
     val route = current?.destination?.route
+    LaunchedEffect(route) { Timber.i("Screen %s", route) }
     // Logging started from a past day returns to that day, not to Today.
     val backToDay = {
         val pastDay = logTarget.date != null && nav.popBackStack(Route.PAST_DAY, inclusive = false)

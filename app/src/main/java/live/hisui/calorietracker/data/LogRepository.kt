@@ -6,8 +6,8 @@ import java.time.LocalDate
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
@@ -23,6 +23,7 @@ import live.hisui.calorietracker.domain.EntrySource
 import live.hisui.calorietracker.domain.Meal
 import live.hisui.calorietracker.domain.MealTagger
 import live.hisui.calorietracker.domain.Nutrition
+import timber.log.Timber
 
 @Singleton
 class LogRepository @Inject constructor(
@@ -65,6 +66,7 @@ class LogRepository @Inject constructor(
     suspend fun logFood(food: Food, grams: Double, meal: Meal, source: EntrySource = EntrySource.MANUAL): Long {
         val now = clock.instant()
         val id = log.insert(foodEntry(food, grams, meal, source, now))
+        Timber.i("Logged food %d (%s) %.1f g to %s", food.id, food.name, grams, meal)
         foods.touch(food.id, now.toEpochMilli())
         return id
     }
@@ -74,6 +76,7 @@ class LogRepository @Inject constructor(
         val groupId = UUID.randomUUID().toString()
         log.insertAll(items.map { (food, grams) -> foodEntry(food, grams, meal, EntrySource.MANUAL, now).copy(groupId = groupId, groupName = name) })
         items.forEach { (food, _) -> foods.touch(food.id, now.toEpochMilli()) }
+        Timber.i("Logged group '%s' with %d items to %s", name, items.size, meal)
     }
 
     suspend fun deleteGroup(groupId: String) = log.deleteGroup(groupId)
