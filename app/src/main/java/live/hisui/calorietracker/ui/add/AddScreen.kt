@@ -44,6 +44,7 @@ import kotlin.math.roundToInt
 import live.hisui.calorietracker.data.db.Food
 import live.hisui.calorietracker.data.db.LogEntry
 import live.hisui.calorietracker.data.db.SavedMeal
+import live.hisui.calorietracker.ui.common.MealChips
 import live.hisui.calorietracker.ui.common.friendly
 import live.hisui.calorietracker.ui.common.gramsText
 import live.hisui.calorietracker.ui.common.kcalText
@@ -137,26 +138,32 @@ fun AddScreen(
     }
     portioning?.let { meal ->
         var grams by remember(meal.id) { mutableStateOf(meal.totalGrams?.roundToInt()?.toString().orEmpty()) }
+        var slot by remember(meal.id) { mutableStateOf(state.currentMeal) }
         AlertDialog(
             onDismissRequest = { portioning = null },
             title = { Text(meal.name) },
             text = {
-                OutlinedTextField(
-                    value = grams,
-                    onValueChange = { grams = it },
-                    label = { Text("Grams you ate") },
-                    supportingText = { Text("The whole meal weighs ${meal.totalGrams?.roundToInt()} g.") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    singleLine = true,
-                )
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    if (meal.totalGrams != null) {
+                        OutlinedTextField(
+                            value = grams,
+                            onValueChange = { grams = it },
+                            label = { Text("Grams you ate") },
+                            supportingText = { Text("The whole meal weighs ${meal.totalGrams?.roundToInt()} g.") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            singleLine = true,
+                        )
+                    }
+                    MealChips(slot, { slot = it })
+                }
             },
             confirmButton = {
                 TextButton(
                     onClick = {
-                        viewModel.logSavedMeal(meal, grams.toDouble(), onLogged)
+                        viewModel.logSavedMeal(meal, slot, grams.toDoubleOrNull().takeIf { meal.totalGrams != null }, onLogged)
                         portioning = null
                     },
-                    enabled = grams.toDoubleOrNull()?.let { it > 0 } == true,
+                    enabled = meal.totalGrams == null || grams.toDoubleOrNull()?.let { it > 0 } == true,
                 ) { Text("Log") }
             },
             dismissButton = { TextButton(onClick = { portioning = null }) { Text("Cancel") } },
@@ -200,7 +207,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.browse(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { if (meal.totalGrams != null) onLogMeal(meal) else viewModel.logSavedMeal(meal, null, onLogged) },
+                    .clickable { onLogMeal(meal) },
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Text(meal.name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f).padding(vertical = 12.dp))

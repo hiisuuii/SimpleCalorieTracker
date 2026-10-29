@@ -22,6 +22,7 @@ import live.hisui.calorietracker.data.db.LogEntry
 import live.hisui.calorietracker.data.db.SavedMeal
 import live.hisui.calorietracker.data.net.FoodCandidate
 import live.hisui.calorietracker.ui.build.DraftItem
+import live.hisui.calorietracker.domain.Meal
 import live.hisui.calorietracker.ui.build.MealDraft
 
 data class AddUiState(
@@ -33,6 +34,7 @@ data class AddUiState(
     val recents: List<LogEntry> = emptyList(),
     val favorites: List<Food> = emptyList(),
     val savedMeals: List<SavedMeal> = emptyList(),
+    val currentMeal: Meal = Meal.SNACK,
 )
 
 @HiltViewModel
@@ -50,6 +52,7 @@ class AddViewModel @Inject constructor(
         collect(log.recentFoodEntries) { s, v -> s.copy(recents = v) }
         collect(foods.favorites) { s, v -> s.copy(favorites = v) }
         collect(savedMeals.meals) { s, v -> s.copy(savedMeals = v) }
+        viewModelScope.launch { _state.update { it.copy(currentMeal = log.mealNow()) } }
         viewModelScope.launch { observeQuery() }
     }
 
@@ -103,9 +106,9 @@ class AddViewModel @Inject constructor(
         }
     }
 
-    fun logSavedMeal(meal: SavedMeal, eatenGrams: Double?, onDone: () -> Unit) {
+    fun logSavedMeal(meal: SavedMeal, slot: Meal, eatenGrams: Double?, onDone: () -> Unit) {
         viewModelScope.launch {
-            savedMeals.log(meal, log.mealNow(), eatenGrams)
+            savedMeals.log(meal, slot, eatenGrams)
             onDone()
         }
     }
