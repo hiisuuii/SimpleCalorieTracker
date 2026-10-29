@@ -79,6 +79,12 @@ interface FoodDao {
     @Query("SELECT * FROM food WHERE barcode = :barcode LIMIT 1")
     suspend fun byBarcode(barcode: String): Food?
 
+    @Query(
+        "SELECT * FROM food WHERE name = :name AND kcal_per_100g = :kcal AND protein_per_100g IS :protein " +
+            "AND carbs_per_100g IS :carbs AND fat_per_100g IS :fat LIMIT 1",
+    )
+    suspend fun matching(name: String, kcal: Double, protein: Double?, carbs: Double?, fat: Double?): Food?
+
     @Query("SELECT * FROM food WHERE source = :source AND external_id = :externalId")
     suspend fun byExternalId(source: FoodSource, externalId: String): Food?
 
@@ -178,6 +184,9 @@ interface SavedMealDao {
 
     @Query("SELECT * FROM saved_meal WHERE id = :id")
     suspend fun byId(id: Long): SavedMeal?
+
+    @Query("SELECT * FROM saved_meal WHERE name = :name COLLATE NOCASE LIMIT 1")
+    suspend fun byName(name: String): SavedMeal?
 
     @Query("UPDATE saved_meal SET name = :name, total_grams = :totalGrams, total_servings = :totalServings WHERE id = :id")
     suspend fun updateDetails(id: Long, name: String, totalGrams: Double?, totalServings: Double?)

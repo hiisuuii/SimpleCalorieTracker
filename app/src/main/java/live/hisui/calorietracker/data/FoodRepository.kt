@@ -17,6 +17,7 @@ import live.hisui.calorietracker.data.net.toCandidate
 import live.hisui.calorietracker.data.net.toPortions
 import live.hisui.calorietracker.domain.FoodSource
 import live.hisui.calorietracker.domain.FtsQuery
+import live.hisui.calorietracker.domain.SharedFood
 import retrofit2.HttpException
 import timber.log.Timber
 
@@ -81,6 +82,18 @@ class FoodRepository @Inject constructor(
         val id = foods.insertWithPortions(candidate.food, candidate.portions)
         candidate.food.copy(id = id)
     }
+
+    // Foods arriving in a shared meal carry only their nutrition, so a local food with the same numbers is reused.
+    suspend fun findOrCreateShared(shared: SharedFood): Food =
+        foods.matching(shared.name, shared.kcalPer100g, shared.proteinPer100g, shared.carbsPer100g, shared.fatPer100g)
+            ?: Food(
+                name = shared.name,
+                source = FoodSource.CUSTOM,
+                kcalPer100g = shared.kcalPer100g,
+                proteinPer100g = shared.proteinPer100g,
+                carbsPer100g = shared.carbsPer100g,
+                fatPer100g = shared.fatPer100g,
+            ).let { it.copy(id = saveCustom(it, emptyList())) }
 
     suspend fun findByBarcode(barcode: String): Food? = foods.byBarcode(barcode)
 

@@ -23,7 +23,17 @@ import live.hisui.calorietracker.data.db.SavedMeal
 import live.hisui.calorietracker.data.net.FoodCandidate
 import live.hisui.calorietracker.ui.build.DraftItem
 import live.hisui.calorietracker.domain.Meal
+import live.hisui.calorietracker.domain.MealCodeException
+import live.hisui.calorietracker.domain.MealShare
+import live.hisui.calorietracker.domain.SharedMeal
 import live.hisui.calorietracker.ui.build.MealDraft
+import timber.log.Timber
+
+sealed interface ImportStep {
+    data object Idle : ImportStep
+    data class Entering(val error: String? = null) : ImportStep
+    data class NameTaken(val meal: SharedMeal, val suggestedName: String, val existingId: Long) : ImportStep
+}
 
 data class AddUiState(
     val query: String = "",
@@ -35,6 +45,8 @@ data class AddUiState(
     val favorites: List<Food> = emptyList(),
     val savedMeals: List<SavedMeal> = emptyList(),
     val currentMeal: Meal = Meal.SNACK,
+    val shareCode: String? = null,
+    val import: ImportStep = ImportStep.Idle,
 )
 
 @HiltViewModel
@@ -110,6 +122,42 @@ class AddViewModel @Inject constructor(
         viewModelScope.launch {
             savedMeals.log(meal, slot, eaten)
             onDone()
+        }
+    }
+
+    fun shareSavedMeal(meal: SavedMeal) {
+        viewModelScope.launch { _state.update { it.copy(shareCode = savedMeals.shareCode(meal)) } }
+    }
+
+    fun dismissShare() = _state.update { it.copy(shareCode = null) }
+
+    fun startImport() = _state.update { it.copy(import = ImportStep.Entering()) }
+
+    fun dismissImport() = _state.update { it.copy(import = ImportStep.Idle) }
+
+    fun submitImport(code: String) {
+        val shared = try {
+            MealShare.decode(code)
+        } catch (e: MealCodeException) {
+            Timber.w(e, "Meal import rejected")
+            _state.update { it.copy(import = ImportStep.Entering(e.message)) }
+            return
+        }
+        viewModelScope.launch {
+            val existing = savedMeals.withName(shared.name)
+            if (existing == null) {
+                savedMeals.import(shared, shared.name, null)
+                dismissImport()
+            } else {
+                _state.update { it.copy(import = ImportStep.NameTaken(shared, savedMeals.uniqueName(shared.name), existing.id)) }
+            }
+        }
+    }
+
+    fun confirmImport(step: ImportStep.NameTaken, name: String, replace: Boolean) {
+        viewModelScope.launch {
+            savedMeals.import(step.meal, name.trim(), step.existingId.takeIf { replace })
+            dismissImport()
         }
     }
 

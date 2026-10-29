@@ -16,6 +16,9 @@ import live.hisui.calorietracker.data.db.AppDatabase
 import live.hisui.calorietracker.data.db.Food
 import live.hisui.calorietracker.domain.FoodSource
 import live.hisui.calorietracker.domain.Meal
+import live.hisui.calorietracker.domain.MealShare
+import live.hisui.calorietracker.domain.SharedFood
+import live.hisui.calorietracker.domain.SharedMeal
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -147,7 +150,7 @@ class GroupLoggingTest {
         val today = log.currentLogDate.first()
         savedMeals.create("Stew", listOf(chicken to 400.0, bun to 200.0), totalGrams = 1000.0)
 
-        savedMeals.log(savedMeals.meals.first().single(), Meal.DINNER, eatenGrams = 250.0)
+        savedMeals.log(savedMeals.meals.first().single(), Meal.DINNER, eaten = 250.0)
 
         val entries = log.entriesForDate(today).first()
         assertEquals(listOf(100.0, 50.0), entries.map { it.grams })
@@ -161,11 +164,50 @@ class GroupLoggingTest {
         savedMeals.create("Sandwich", listOf(chicken to 100.0), totalGrams = null)
         val id = savedMeals.meals.first().single().id
 
-        savedMeals.update(id, "Chicken sandwich", listOf(chicken to 120.0, bun to 50.0), totalGrams = 180.0)
+        savedMeals.update(id, "Chicken sandwich", listOf(chicken to 120.0, bun to 50.0), totalGrams = 180.0, totalServings = null)
 
         val meal = savedMeals.get(id)!!
         assertEquals("Chicken sandwich", meal.name)
         assertEquals(180.0, meal.totalGrams!!, 0.001)
         assertEquals(listOf(120.0, 50.0), savedMeals.foodsOf(id).map { it.second })
+    }
+
+    @Test
+    fun loggingServingsOfAMealScalesEveryFood() = runTest {
+        val flour = food("Flour", 364.0)
+        val egg = food("Egg", 148.0)
+        val today = log.currentLogDate.first()
+        savedMeals.create("Waffles", listOf(flour to 500.0, egg to 200.0), totalServings = 10.0)
+
+        savedMeals.log(savedMeals.meals.first().single(), Meal.BREAKFAST, eaten = 2.0)
+
+        assertEquals(listOf(100.0, 40.0), log.entriesForDate(today).first().map { it.grams })
+    }
+
+    @Test
+    fun aSharedMealImportsWithItsFoodsAndReusesMatchingOnes() = runTest {
+        val flour = food("Flour", 364.0)
+        val egg = food("Egg", 148.0)
+        savedMeals.create("Waffles", listOf(flour to 500.0, egg to 200.0), totalServings = 10.0)
+        val code = savedMeals.shareCode(savedMeals.meals.first().single())
+        val foodsBefore = db.foodDao().customFoods().first().size
+
+        val shared = MealShare.decode(code)
+        savedMeals.import(shared, savedMeals.uniqueName(shared.name), null)
+
+        val copy = savedMeals.withName("Waffles (2)")!!
+        assertEquals(10.0, copy.totalServings!!, 0.001)
+        assertEquals(listOf(500.0, 200.0), savedMeals.foodsOf(copy.id).map { it.second })
+        assertEquals(foodsBefore, db.foodDao().customFoods().first().size)
+    }
+
+    @Test
+    fun importingAMealCreatesFoodsTheRecipientLacks() = runTest {
+        val shared = SharedMeal("Toast", 100.0, null, listOf(SharedFood("Bread", 265.0, 9.0, 49.0, 3.2, 100.0)))
+
+        savedMeals.import(shared, "Toast", null)
+
+        val meal = savedMeals.withName("toast")!!
+        assertEquals("Bread", savedMeals.foodsOf(meal.id).single().first.name)
     }
 }

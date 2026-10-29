@@ -9,6 +9,9 @@ import live.hisui.calorietracker.data.db.SavedMeal
 import live.hisui.calorietracker.data.db.SavedMealDao
 import live.hisui.calorietracker.data.db.SavedMealItem
 import live.hisui.calorietracker.domain.Meal
+import live.hisui.calorietracker.domain.MealShare
+import live.hisui.calorietracker.domain.SharedFood
+import live.hisui.calorietracker.domain.SharedMeal
 import timber.log.Timber
 
 @Singleton
@@ -52,6 +55,24 @@ class SavedMealRepository @Inject constructor(
         val scale = if (eaten != null && total != null) eaten / total else 1.0
         val items = foodsOf(meal.id).map { (food, grams) -> food to grams * scale }
         if (items.isNotEmpty()) log.logGroup(meal.name, items, slot)
+    }
+
+    suspend fun shareCode(meal: SavedMeal): String {
+        val items = foodsOf(meal.id).map { (food, grams) ->
+            SharedFood(food.name, food.kcalPer100g, food.proteinPer100g, food.carbsPer100g, food.fatPer100g, grams)
+        }
+        return MealShare.encode(SharedMeal(meal.name, meal.totalGrams, meal.totalServings, items))
+    }
+
+    suspend fun withName(name: String): SavedMeal? = dao.byName(name)
+
+    suspend fun uniqueName(name: String): String =
+        generateSequence(2) { it + 1 }.map { "$name ($it)" }.first { dao.byName(it) == null }
+
+    suspend fun import(shared: SharedMeal, name: String, replaceId: Long?) {
+        val items = shared.items.map { foods.findOrCreateShared(it) to it.grams }
+        if (replaceId != null) update(replaceId, name, items, shared.totalGrams, shared.totalServings)
+        else create(name, items, shared.totalGrams, shared.totalServings)
     }
 
     suspend fun delete(id: Long) {

@@ -17,6 +17,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -109,6 +110,7 @@ fun AddScreen(
                 item {
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton(onClick = onQuickAdd) { Text("Quick add") }
+                        OutlinedButton(onClick = viewModel::startImport) { Text("Import meal") }
                         OutlinedButton(onClick = onScanLabel) { Text("Scan label") }
                         OutlinedButton(onClick = onCustomFood) { Text("Custom food") }
                     }
@@ -121,6 +123,9 @@ fun AddScreen(
             }
         }
     }
+
+    state.shareCode?.let { ExportMealDialog(it, viewModel::dismissShare) }
+    ImportMealDialog(state.import, viewModel)
 
     deleting?.let { meal ->
         AlertDialog(
@@ -217,6 +222,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.browse(
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Text(meal.name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f).padding(vertical = 12.dp))
+                IconButton(onClick = { viewModel.shareSavedMeal(meal) }) { Icon(Icons.Default.Share, "Export ${meal.name}") }
                 IconButton(onClick = { viewModel.editSavedMeal(meal, onEdit) }) { Icon(Icons.Default.Edit, "Edit ${meal.name}") }
                 IconButton(onClick = { onDelete(meal) }) { Icon(Icons.Default.Delete, "Delete ${meal.name}") }
             }
